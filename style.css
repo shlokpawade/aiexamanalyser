@@ -1,0 +1,634 @@
+/* =========================================
+   GLOBAL RESET & BASE
+========================================= */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Poppins", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+    margin: 0;
+    background: linear-gradient(135deg, #eff5ff, #dbe7ff);
+    color: #222;
+}
+
+/* Generic links */
+a {
+    color: #2a4aff;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Utility */
+.hidden {
+    display: none;
+}
+
+/* =========================================
+   INDEX PAGE (AI EXAM ANALYZER MAIN TOOL)
+   Works with index.html <div class="page">...
+========================================= */
+
+/* Shared page wrapper used by index */
+.page {
+    width: 100%;
+    max-width: 480px;
+    margin: 40px auto 60px;
+    padding: 0 16px;
+}
+
+/* Main header text above card (inside index predictor box area) */
+.header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.header h1 {
+    font-size: 30px;
+    font-weight: 700;
+    color: #2a4aff;
+}
+
+.header p {
+    font-size: 14px;
+    color: #555;
+    margin-top: 5px;
+}
+
+/* Main white card */
+.predictor-box {
+    background: #ffffff;
+    padding: 22px;
+    border-radius: 18px;
+    box-shadow: 0px 8px 22px rgba(0, 0, 0, 0.08);
+    animation: popIn 0.6s ease;
+}
+
+@keyframes popIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Section headings inside card */
+.predictor-box h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #222;
+}
+
+.small {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+/* File input */
+#fileInput {
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    border: 2px dashed #b9c7ff;
+    background: #f7f9ff;
+    cursor: pointer;
+    margin-bottom: 15px;
+}
+
+#fileInput:hover {
+    background: #eef3ff;
+}
+
+/* Analyze button */
+.analyze-btn {
+    width: 100%;
+    padding: 14px;
+    background: #2a4aff;
+    border: none;
+    color: white;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.analyze-btn:hover {
+    background: #1e37d6;
+    transform: translateY(-2px);
+}
+
+/* Loading box */
+.loading-box {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f1f5ff;
+    border-radius: 12px;
+    border-left: 5px solid #2a4aff;
+    animation: pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+#loadingText {
+    font-size: 14px;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #dbe3ff;
+    border-radius: 50px;
+    overflow: hidden;
+}
+
+#progressFill {
+    height: 8px;
+    width: 0%;
+    background: #2a4aff;
+    transition: width 0.25s ease;
+}
+
+/* Results */
+.results-title {
+    margin-top: 25px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #2a4aff;
+}
+
+.output-box {
+    margin-top: 12px;
+    padding: 18px;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0px 4px 14px rgba(0,0,0,0.08);
+    font-size: 14px;
+    line-height: 1.6;
+    color: #333;
+}
+
+/* Headings + lists inside AI markdown */
+.output-box h2,
+.output-box h3 {
+    margin: 16px 0 8px;
+    color: #2a4aff;
+}
+
+.output-box ul {
+    margin: 8px 0 12px 18px;
+}
+
+/* WhatsApp button */
+.whatsapp-btn {
+    width: 100%;
+    margin-top: 12px;
+    padding: 14px;
+    background: #25D366;
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.whatsapp-btn:hover {
+    background: #1aba5a;
+}
+
+/* Error text */
+.error {
+    color: #b91c1c;
+    background: #fee2e2;
+    border-radius: 8px;
+    padding: 10px;
+    margin-top: 10px;
+}
+
+/* Internal navbar (inside index card) */
+.internal-navbar {
+    width: 100%;
+    padding: 12px 15px;
+    background: #f7f9fc;
+    border-radius: 12px;
+    border: 1px solid #e1e1e1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+}
+
+.internal-navbar .nav-left {
+    font-weight: 700;
+    color: #1c4bff;
+    font-size: 18px;
+}
+
+.internal-navbar .nav-right a {
+    margin-left: 14px;
+    text-decoration: none;
+    font-size: 14px;
+    color: #333;
+}
+
+.internal-navbar .nav-right a:hover {
+    color: #1c4bff;
+}
+
+/* Internal footer (inside index card) */
+.internal-footer {
+    margin-top: 35px;
+    padding-top: 18px;
+    border-top: 1px solid #ddd;
+    text-align: center;
+}
+
+.internal-footer p {
+    font-size: 13px;
+    color: #555;
+    margin-bottom: 10px;
+}
+
+.internal-footer .footer-links a {
+    margin: 0 6px;
+    font-size: 13px;
+    color: #1c4bff;
+    text-decoration: none;
+}
+
+.internal-footer .footer-links a:hover {
+    text-decoration: underline;
+}
+
+/* =========================================
+   GLOBAL HEADER (ABOUT / PRIVACY / TERMS...)
+   Used on about.html, privacy.html, terms.html,
+   disclaimer.html, cookies.html, contact.html
+========================================= */
+
+.site-header {
+    background: #ffffff;
+    width: 100%;
+    border-bottom: 1px solid #e2e4f0;
+    padding: 10px 0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.header-container {
+    width: 94%;
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Logo */
+.logo {
+    font-size: 20px;
+    font-weight: 700;
+    color: #2a4aff;
+}
+
+/* Desktop navigation */
+.nav-links a {
+    margin-left: 18px;
+    font-size: 14px;
+    color: #444;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.nav-links a:hover {
+    color: #2a4aff;
+}
+
+.nav-links a.active {
+    color: #2a4aff;
+    font-weight: 600;
+}
+
+/* Mobile menu button */
+.mobile-menu-btn {
+    display: none;
+    font-size: 24px;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+/* Mobile dropdown */
+.mobile-menu {
+    background: #ffffff;
+    border-bottom: 1px solid #e2e4f0;
+    padding: 10px 20px 6px;
+}
+
+.mobile-menu a {
+    display: block;
+    padding: 8px 0;
+    font-size: 14px;
+    color: #444;
+    text-decoration: none;
+}
+
+.mobile-menu a:hover {
+    color: #2a4aff;
+}
+
+.mobile-menu a.active {
+    color: #2a4aff;
+    font-weight: 600;
+}
+
+/* =========================================
+   PAGE CONTENT WRAPPER
+   Used on About / Privacy / Terms / Disclaimer / Contact
+========================================= */
+
+.page-container {
+    width: 92%;
+    max-width: 900px;
+    margin: 30px auto 40px;
+    background: #ffffff;
+    padding: 24px 20px 30px;
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.04);
+}
+
+/* Headings & text for these pages */
+.page-container h1 {
+    font-size: 28px;
+    margin: 0 0 12px;
+    color: #2a4aff;
+}
+
+.page-container h2 {
+    font-size: 22px;
+    margin-top: 22px;
+    margin-bottom: 8px;
+    color: #222;
+}
+
+.page-container h3 {
+    font-size: 18px;
+    margin-top: 20px;
+    margin-bottom: 6px;
+    color: #222;
+}
+
+.page-container p {
+    font-size: 14px;
+    line-height: 1.7;
+    margin: 8px 0 10px;
+}
+
+.page-container ul {
+    margin: 8px 0 18px 20px;
+    padding: 0;
+}
+
+.page-container li {
+    font-size: 14px;
+    line-height: 1.7;
+    margin-bottom: 6px;
+}
+
+/* =========================================
+   FOOTER (GLOBAL)
+========================================= */
+
+.site-footer {
+    background: #f7f8ff;
+    padding: 18px 0 20px;
+    border-top: 1px solid #e2e4f0;
+    margin-top: 40px;
+}
+
+.footer-container {
+    width: 94%;
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.site-footer p {
+    margin: 4px 0;
+    font-size: 13px;
+    color: #666;
+}
+
+.footer-right a {
+    margin-left: 14px;
+    font-size: 13px;
+    color: #555;
+    text-decoration: none;
+}
+
+.footer-right a:hover {
+    color: #2a4aff;
+}
+
+/* =========================================
+   COOKIES PAGE SPECIAL LAYOUT
+   cookies.html uses: <header> + <div class="page"><div class="card">
+   We override .page ONLY when it's directly after .site-header
+========================================= */
+
+/* When .page comes right after the sticky header (cookies page) */
+.site-header + .page {
+    max-width: 900px;
+    margin: 30px auto 40px;
+    padding: 0 16px 40px;
+}
+
+/* Card inside cookies page */
+.site-header + .page .card {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 24px 20px 26px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.04);
+}
+
+/* Back link at top of cookies page */
+.back-link {
+    display: inline-block;
+    margin-bottom: 14px;
+    font-size: 13px;
+}
+
+/* Headings & text inside cookies card */
+.site-header + .page .card h1 {
+    font-size: 28px;
+    margin: 0 0 12px;
+    color: #2a4aff;
+}
+
+.site-header + .page .card h3 {
+    font-size: 18px;
+    margin-top: 20px;
+    margin-bottom: 6px;
+    color: #222;
+}
+
+.site-header + .page .card p,
+.site-header + .page .card li {
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 768px) {
+
+    /* Index page tightening */
+    .page {
+        margin: 24px auto 40px;
+        padding: 0 12px;
+    }
+
+    .header h1 {
+        font-size: 26px;
+    }
+
+    .predictor-box {
+        padding: 18px;
+    }
+
+    .results-title {
+        font-size: 18px;
+    }
+
+    .output-box {
+        font-size: 13.5px;
+    }
+
+    /* Nav */
+    .nav-links {
+        display: none;
+    }
+
+    .mobile-menu-btn {
+        display: block;
+    }
+
+    .header-container {
+        width: 92%;
+    }
+
+    /* Global pages */
+    .page-container {
+        width: 94%;
+        margin: 20px auto 28px;
+        padding: 20px 16px 24px;
+    }
+
+    .footer-container {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .footer-right {
+        margin-top: 4px;
+    }
+
+    .footer-right a {
+        margin-left: 0;
+        margin-right: 12px;
+    }
+
+    /* Cookies override on small screens */
+    .site-header + .page {
+        width: 94%;
+        margin: 20px auto 28px;
+        padding: 0 4px 24px;
+    }
+
+    .site-header + .page .card {
+        padding: 20px 16px 22px;
+    }
+}
+
+/* ===========================
+   COOKIE POPUP
+=========================== */
+.cookie-popup {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: auto;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 15px;
+    z-index: 9999;
+}
+
+.cookie-box {
+    background: #fff;
+    width: 90%;
+    max-width: 420px;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    text-align: center;
+}
+
+.cookie-box h3 {
+    margin-top: 0;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.cookie-btns {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 15px;
+}
+
+.cookie-accept {
+    background: #0066ff;
+    color: #fff;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 48%;
+    font-size: 15px;
+}
+
+.cookie-reject {
+    background: #ddd;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 48%;
+    font-size: 15px;
+}
+
+.cookie-accept:hover { background: #004ec7; }
+.cookie-reject:hover { background: #c6c6c6; }
+
+

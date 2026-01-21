@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KPGLYGXVK3"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+    
+      gtag('config', 'G-KPGLYGXVK3');
+    </script>
+    <title>Contact – AI Exam Analyzer</title>
+    <link rel="icon" type="image/png" href="logo/logo.png">
+
+    <!-- Main global styles for whole site -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Contact page–only styles (new file) -->
+    <link rel="stylesheet" href="contact.css">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8883664058887650"
+     crossorigin="anonymous"></script>
+</head>
+
+<body class="contact-page">
+
+<header class="site-header">
+    <div class="header-container">
+        <a href="index.html" class="logo">AI Exam Analyzer</a>
+
+        <nav class="nav-links">
+            <a href="about.html">About</a>
+            <a href="privacy.html">Privacy</a>
+            <a href="terms.html">Terms</a>
+            <a href="disclaimer.html">Disclaimer</a>
+            <a href="cookies.html">Cookies</a>
+            <a href="contact.html">Contact</a>
+        </nav>
+        <button class="mobile-menu-btn" onclick="toggleMenu()">☰</button>
+    </div>
+
+    <div id="mobileMenu" class="mobile-menu hidden">
+        <a href="about.html">About</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="terms.html">Terms</a>
+        <a href="disclaimer.html">Disclaimer</a>
+        <a href="cookies.html">Cookies</a>
+        <a href="contact.html">Contact</a>
+    </div>
+</header>
+
+<div class="page-container contact-page-container">
+    <div class="contact-header">
+        <h1>Contact Us</h1>
+        <p>If you have any questions, suggestions, or want to report an issue, you can reach us using the form below or via email / Instagram.</p>
+    </div>
+
+    <!-- CONTACT SECTION WRAPPER -->
+    <div class="contact-section">
+        <!-- CONTACT FORM -->
+        <div class="contact-form-card">
+            <h2>Send us a message</h2>
+
+            <form id="contactForm" action="https://api.web3forms.com/submit" method="POST" class="contact-form">
+
+                <!-- Required: your Web3Forms access key -->
+                <input type="hidden" name="access_key" value="c3963c93-fc60-4ff0-9cb1-98343b42bfd6">
+
+                <!-- Optional: subject / from page info -->
+                <input type="hidden" name="from_page" value="AI Exam Analyzer Contact Page">
+
+                <div class="form-group">
+                    <label for="name">Your Name</label>
+                    <input type="text" id="name" name="name" placeholder="Enter your name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Your Email</label>
+                    <input type="email" id="email" name="email" placeholder="Enter your email" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="subject">Subject</label>
+                    <input type="text" id="subject" name="subject" placeholder="What is this about?" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="message">Your Message</label>
+                    <textarea id="message" name="message" rows="5" placeholder="Write your message..." required></textarea>
+                </div>
+
+                <p id="formStatus" class="form-status" style="display:none;"></p>
+
+                <button type="submit" class="contact-submit-btn">Send Message</button>
+            </form>
+        </div>
+
+        <!-- CONTACT INFO -->
+        <div class="contact-info-card">
+            <span class="contact-badge">🔒 Secure & Fast Response</span>
+
+            <h2>Other ways to reach us</h2>
+            <p class="contact-info-text">
+                You can contact us directly via email or Instagram for doubts, feature requests, or bug reports.
+            </p>
+
+            <ul class="contact-info-list">
+                <li>
+                    <span class="label">Email</span>
+                    <a href="mailto:shlokpawade@aiexamanalyzer.online">shlokpawade@aiexamanalyzer.online</a>
+                </li>
+                <li>
+                    <span class="label">Instagram</span>
+                    <a href="https://instagram.com/shlok.pawade" target="_blank">@shlok.pawade</a>
+                </li>
+            </ul>
+
+            <p class="contact-note">
+                We usually reply within 24–48 hours.  
+                Don’t hesitate to share screenshots or exam details, it helps us improve AI Exam Analyzer for everyone ❤️
+            </p>
+        </div>
+    </div>
+</div>
+
+<footer class="site-footer">
+    <div class="footer-container">
+        <p>© 2025 AI Exam Analyzer — All rights reserved</p>
+        <div class="footer-right">
+            <a href="about.html">About</a>
+            <a href="privacy.html">Privacy</a>
+            <a href="terms.html">Terms</a>
+            <a href="disclaimer.html">Disclaimer</a>
+            <a href="cookies.html">Cookies</a>
+            <a href="contact.html">Contact</a>
+        </div>
+    </div>
+</footer>
+
+<script>
+function toggleMenu() {
+    document.getElementById("mobileMenu").classList.toggle("hidden");
+}
+
+// Contact form submit via AJAX (no redirect)
+const contactForm = document.getElementById("contactForm");
+const formStatus = document.getElementById("formStatus");
+
+if (contactForm) {
+    contactForm.addEventListener("submit", async function (e) {
+        e.preventDefault();
+
+        formStatus.style.display = "block";
+        formStatus.textContent = "Sending your message...";
+
+        const formData = new FormData(contactForm);
+
+        try {
+            const response = await fetch(contactForm.action, {
+                method: "POST",
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                formStatus.textContent = "✅ Thank you! Your message has been sent.";
+                contactForm.reset();
+            } else {
+                formStatus.textContent = "❌ Something went wrong. Please try again in a while.";
+                console.error(result);
+            }
+        } catch (error) {
+            formStatus.textContent = "⚠ Network error. Please check your connection and try again.";
+            console.error(error);
+        }
+    });
+}
+</script>
+
+<!-- =========================
+     COOKIES POPUP
+========================= -->
+<div id="cookie-popup" class="cookie-popup">
+    <div class="cookie-box">
+        <h3>🍪 Cookie Notice</h3>
+        <p>
+            We use cookies to improve your experience, analyze usage, and show personalized content.
+            You can accept or reject cookies anytime.
+        </p>
+
+        <div class="cookie-btns">
+            <button id="acceptCookies" class="cookie-accept">Accept</button>
+            <button id="rejectCookies" class="cookie-reject">Reject</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Show popup only if not accepted before
+    if (!localStorage.getItem("cookiesChoice")) {
+        document.getElementById("cookie-popup").style.display = "flex";
+    }
+
+    document.getElementById("acceptCookies").onclick = function () {
+        localStorage.setItem("cookiesChoice", "accepted");
+        document.getElementById("cookie-popup").style.display = "none";
+    };
+
+    document.getElementById("rejectCookies").onclick = function () {
+        localStorage.setItem("cookiesChoice", "rejected");
+        document.getElementById("cookie-popup").style.display = "none";
+    };
+</script>
+
+</body>
+</html>
+
+
+
+

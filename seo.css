@@ -1,0 +1,183 @@
+/* ========== SEO SECTION (HOMEPAGE CONTENT) ========== */
+
+.seo-section {
+    margin-top: 32px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06); /* matches the idea of a gray divider */
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.seo-section h2 {
+    font-size: 1.25rem;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.seo-section h3 {
+    font-size: 1rem;
+    margin-bottom: 6px;
+    font-weight: 600;
+}
+
+.seo-intro {
+    margin-bottom: 18px;
+    color: #444;
+}
+
+/* ===== GRID CARDS (TOP FEATURES) ===== */
+
+.seo-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+}
+
+.seo-card {
+    background: #f8f9ff;
+    border-radius: 10px;
+    padding: 14px 12px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.seo-card p {
+    font-size: 0.9rem;
+    color: #555;
+}
+
+/* ===== HOW IT WORKS STEPS ===== */
+
+.seo-steps {
+    margin-top: 10px;
+    margin-bottom: 24px;
+}
+
+.seo-steps-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 10px;
+}
+
+.seo-step {
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 12px 12px 12px 40px;
+    position: relative;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.step-badge {
+    position: absolute;
+    left: 10px;
+    top: 12px;
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: linear-gradient(135deg, #2563eb, #4f46e5);
+    color: #fff;
+}
+
+.seo-step p {
+    font-size: 0.9rem;
+    color: #555;
+}
+
+/* ===== BENEFITS / WHO CAN USE ===== */
+
+.seo-benefits {
+    margin-bottom: 22px;
+}
+
+.seo-list {
+    list-style: none;
+    padding-left: 0;
+    margin-top: 10px;
+}
+
+.seo-list li {
+    margin-bottom: 8px;
+    padding-left: 24px;
+    position: relative;
+    font-size: 0.92rem;
+}
+
+.seo-list li::before {
+    content: "•";
+    position: absolute;
+    left: 10px;
+    top: 0;
+    font-size: 1.2rem;
+    color: #2563eb;
+}
+
+/* ===== FAQ ===== */
+
+.seo-faq {
+    margin-bottom: 22px;
+}
+
+.faq-item {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    background: #f9fafb;
+}
+
+.faq-item h3 {
+    margin-bottom: 4px;
+}
+
+.faq-item p {
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.faq-item a {
+    color: #2563eb;
+    text-decoration: none;
+}
+
+.faq-item a:hover {
+    text-decoration: underline;
+}
+
+/* ===== KEYWORDS (SMALL TEXT) ===== */
+
+.seo-keywords {
+    margin-top: 6px;
+    font-size: 0.8rem;
+    color: #6b7280;
+}
+
+/* ===== RESPONSIVE BEHAVIOR ===== */
+
+@media (max-width: 900px) {
+    .seo-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .seo-steps-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .seo-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .seo-section {
+        font-size: 0.9rem;
+    }
+}
+    

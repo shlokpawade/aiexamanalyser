@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KPGLYGXVK3"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+         gtag('js', new Date());
+
+        gtag('config', 'G-KPGLYGXVK3');
+    </script>   
+    <title>AI Exam Analyzer</title>
+     
+     <meta name="description" content="Upload your previous year question papers and get AI-generated repeated questions, important topics, chapter-wise weightage and a smart study plan.">
+
+    
+
+    <link rel="icon" type="image/png" href="logo/logo.png">
+
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Main CSS -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- SEO Content CSS -->
+    <link rel="stylesheet" href="seo.css">
+
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js"></script>
+
+    <!-- Tesseract.js for OCR -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+
+    <!-- Marked.js -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8883664058887650"
+     crossorigin="anonymous"></script>
+</head>
+<body>
+
+<div class="page">
+
+    <!-- MAIN CARD -->
+    <div class="predictor-box">
+
+        <!-- ⭐ INTERNAL NAVBAR INSIDE BOX -->
+        <nav class="internal-navbar">
+            <div class="nav-left">AI Exam Analyzer</div>
+
+            <div class="nav-right">
+                <a href="about.html">About</a>
+                <a href="privacy.html">Privacy</a>
+                <a href="contact.html">Contact</a>
+                <a href="blog.html">Blog</a>
+            </div>
+        </nav>
+        <!-- END INTERNAL NAVBAR -->
+
+        <!-- HEADER -->
+        <div class="header">
+            <h1>📘 AI Exam Analyzer</h1>
+            <p>Upload your previous year papers & get AI-based predictions, important topics & study plan.</p>
+        </div>
+
+        <!-- Upload Section -->
+        <h2>Upload Question Papers</h2>
+        <p class="small">Upload 3–5 previous year papers (PDFs, even scanned)</p>
+
+        <input type="file" id="fileInput" multiple accept=".pdf, image/*">
+
+        <button id="analyzeBtn" class="analyze-btn">🔍 Analyze Papers</button>
+
+        <!-- Loading UI -->
+        <div id="loadingContainer" class="hidden loading-box">
+            <div id="loadingText">Initializing…</div>
+            <div class="progress-bar">
+                <div id="progressFill"></div>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <h2 class="results-title hidden">📊 Results</h2>
+        <div id="output" class="output-box"></div>
+
+        <!-- WhatsApp share button -->
+        <button id="shareWhatsApp" class="whatsapp-btn">
+            📩 Share Repeated Questions on WhatsApp
+        </button>
+
+        <!-- =========================
+             SEO CONTENT SECTION (INSIDE CARD)
+        ========================= -->
+        <section class="seo-section" aria-label="About AI Exam Analyzer and exam preparation help">
+            <h2>What is AI Exam Analyzer?</h2>
+            <p class="seo-intro">
+                AI Exam Analyzer is a smart tool that studies your previous year question papers (PYQs)
+                and shows you the most repeated questions, high-weightage topics and a focused study plan.
+                It is designed for students preparing for engineering, university, diploma and school exams
+                who want to study smarter, not harder.
+            </p>
+
+            <div class="seo-grid">
+                <div class="seo-card">
+                    <h3>🎯 Focus on What Actually Comes in Exams</h3>
+                    <p>
+                        Instead of guessing the syllabus, upload your PYQs and let AI find
+                        patterns: most repeated questions, frequently asked chapters and
+                        the concepts that carry maximum marks.
+                    </p>
+                </div>
+                <div class="seo-card">
+                    <h3>📚 Works with Scanned PDFs & Images</h3>
+                    <p>
+                        Have only photocopies or blurry scans? No problem.
+                        AI Exam Analyzer can read scanned PDFs and images using OCR and
+                        convert them into clean, analyzable text.
+                    </p>
+                </div>
+                <div class="seo-card">
+                    <h3>⏱️ Perfect for Last-Minute Revision</h3>
+                    <p>
+                        Just before exams, quickly upload 3–5 previous year papers and instantly
+                        get a condensed revision plan highlighting must-do topics to clear or even
+                        top the exam.
+                    </p>
+                </div>
+            </div>
+
+            <section class="seo-steps" aria-label="How AI Exam Analyzer works">
+                <h2>How AI Exam Analyzer Works</h2>
+                <div class="seo-steps-grid">
+                    <div class="seo-step">
+                        <span class="step-badge">1</span>
+                        <h3>Upload Previous Year Question Papers</h3>
+                        <p>
+                            Choose 3–5 papers for the same subject or exam.
+                            You can upload PDFs or images directly from your phone or laptop.
+                        </p>
+                    </div>
+                    <div class="seo-step">
+                        <span class="step-badge">2</span>
+                        <h3>AI Reads & Understands Every Question</h3>
+                        <p>
+                            The system extracts questions, normalizes similar questions and detects
+                            patterns across years using advanced AI models.
+                        </p>
+                    </div>
+                    <div class="seo-step">
+                        <span class="step-badge">3</span>
+                        <h3>Get Insights, Repeated Questions & Topics</h3>
+                        <p>
+                            You receive a clear breakdown of repeated questions, important topics,
+                            chapter-wise weightage and a custom study roadmap.
+                        </p>
+                    </div>
+                    <div class="seo-step">
+                        <span class="step-badge">4</span>
+                        <h3>Download / Share with Friends</h3>
+                        <p>
+                            Instantly share important questions on WhatsApp or revise together with
+                            your friends for better group study sessions.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="seo-benefits" aria-label="Who can use AI Exam Analyzer">
+                <h2>Who Can Use AI Exam Analyzer?</h2>
+                <ul class="seo-list">
+                    <li>🎓 <strong>Engineering students</strong> preparing for university semester exams.</li>
+                    <li>📖 <strong>Diploma & polytechnic students</strong> who depend heavily on PYQs.</li>
+                    <li>🏫 <strong>School & college students</strong> appearing for board or internal exams.</li>
+                    <li>👨‍🏫 <strong>Teachers & coaching institutes</strong> creating targeted practice sets.</li>
+                </ul>
+            </section>
+
+            <section class="seo-faq" aria-label="Frequently asked questions">
+                <h2>Frequently Asked Questions</h2>
+
+                <div class="faq-item">
+                    <h3>Do I still need to study the full syllabus?</h3>
+                    <p>
+                        Yes. AI Exam Analyzer helps you understand what is most important,
+                        but it is always better to cover your syllabus properly.
+                        Use the tool to prioritize revision, not to completely skip topics.
+                    </p>
+                </div>
+
+                <div class="faq-item">
+                    <h3>How many papers should I upload for best results?</h3>
+                    <p>
+                        We recommend uploading at least 3–5 previous year question papers
+                        for the same subject or exam. More papers generally mean better
+                        pattern detection and stronger predictions.
+                    </p>
+                </div>
+
+                <div class="faq-item">
+                    <h3>Is AI Exam Analyzer free to try?</h3>
+                    <p>
+                        You can start by uploading your papers and seeing the
+                        generated insights. In the future, we may add premium
+                        features like saving history, exporting reports and
+                        advanced analytics for coaching centers.
+                    </p>
+                </div>
+
+                <div class="faq-item">
+                    <h3>Is my data and question papers safe?</h3>
+                    <p>
+                        Your uploaded papers are used only for analysis and
+                        improving your experience. We do not publicly share or
+                        sell your data. For more information, check our
+                        <a href="privacy.html">Privacy Policy</a> and
+                        <a href="terms.html">Terms</a>.
+                    </p>
+                </div>
+            </section>
+
+            <section class="seo-keywords" aria-label="Popular searches">
+                <p>
+                    Popular searches: AI exam analyser, previous year question paper analyzer,
+                    PYQ analysis tool, exam question pattern finder, important questions from
+                    past papers, how to pass exam using PYQ, smart study using AI.
+                </p>
+            </section>
+        </section>
+        <!-- END SEO CONTENT SECTION -->
+
+        <!-- ⭐ INTERNAL FOOTER INSIDE BOX -->
+        <footer class="internal-footer">
+            <p>© 2025 AI Exam Analyzer • All Rights Reserved</p>
+
+            <div class="footer-links">
+                <a href="about.html">About</a>
+                <a href="privacy.html">Privacy Policy</a>
+                <a href="terms.html">Terms</a>
+                <a href="disclaimer.html">Disclaimer</a>
+                <a href="cookies.html">Cookies</a>
+                <a href="contact.html">Contact</a>
+            </div>
+        </footer>
+        <!-- END INTERNAL FOOTER -->
+
+    </div> <!-- END predictor-box -->
+
+</div> <!-- END page -->
+
+<!-- Main Script -->
+<script src="script.js"></script>
+
+
+<!-- =========================
+     COOKIES POPUP
+========================= -->
+<div id="cookie-popup" class="cookie-popup">
+    <div class="cookie-box">
+        <h3>🍪 Cookie Notice</h3>
+        <p>
+            We use cookies to improve your experience, analyze usage, and show personalized content.
+            You can accept or reject cookies anytime.
+        </p>
+
+        <div class="cookie-btns">
+            <button id="acceptCookies" class="cookie-accept">Accept</button>
+            <button id="rejectCookies" class="cookie-reject">Reject</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Show popup only if not accepted before
+    if (!localStorage.getItem("cookiesChoice")) {
+        document.getElementById("cookie-popup").style.display = "flex";
+    }
+
+    document.getElementById("acceptCookies").onclick = function () {
+        localStorage.setItem("cookiesChoice", "accepted");
+        document.getElementById("cookie-popup").style.display = "none";
+    };
+
+    document.getElementById("rejectCookies").onclick = function () {
+        localStorage.setItem("cookiesChoice", "rejected");
+        document.getElementById("cookie-popup").style.display = "none";
+    };
+</script>
+
+</body>
+</html>
+

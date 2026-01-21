@@ -1,0 +1,221 @@
+/* ================================
+   CONTACT PAGE – SCOPED STYLES
+   (applies only when body has .contact-page)
+=================================== */
+
+/* Page background + base font only for contact page */
+body.contact-page {
+    font-family: "Poppins", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    background: radial-gradient(circle at top, #e4f0ff 0, #eef3ff 40%, #d9e4ff 100%);
+}
+
+/* Container tweaks only for this page */
+body.contact-page .contact-page-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 80px 16px 40px;
+}
+
+/* Header text inside contact page */
+body.contact-page .contact-header h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 8px;
+}
+
+body.contact-page .contact-header p {
+    font-size: 0.95rem;
+    color: #6b7280;
+    max-width: 620px;
+}
+
+/* Layout of form + info cards */
+body.contact-page .contact-section {
+    margin-top: 28px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    gap: 24px;
+}
+
+/* ====== CARD SHARED STYLES ====== */
+body.contact-page .contact-form-card,
+body.contact-page .contact-info-card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 22px 20px;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
+    border: 1px solid rgba(148, 163, 184, 0.45);
+}
+
+/* Left card title */
+body.contact-page .contact-form-card h2,
+body.contact-page .contact-info-card h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 12px;
+}
+
+/* ====== FORM ====== */
+
+body.contact-page .contact-form {
+    margin-top: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+body.contact-page .contact-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+body.contact-page .contact-form label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #374151;
+}
+
+body.contact-page .contact-form input,
+body.contact-page .contact-form textarea {
+    width: 100%;
+    padding: 10px 11px;
+    border-radius: 12px;
+    border: 1px solid #d1d5db;
+    background: #f9fafb;
+    font-size: 0.9rem;
+    outline: none;
+    transition: all 0.18s ease;
+}
+
+body.contact-page .contact-form textarea {
+    resize: vertical;
+    min-height: 120px;
+}
+
+/* Focus state */
+body.contact-page .contact-form input:focus,
+body.contact-page .contact-form textarea:focus {
+    border-color: #2563eb;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+}
+
+/* Status message */
+body.contact-page .form-status {
+    font-size: 0.85rem;
+    margin-top: 4px;
+}
+
+/* Submit button */
+body.contact-page .contact-submit-btn {
+    margin-top: 4px;
+    padding: 11px 16px;
+    border-radius: 999px;
+    border: none;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    cursor: pointer;
+    background: linear-gradient(135deg, #2563eb, #4f46e5);
+    color: #ffffff;
+    box-shadow: 0 12px 30px rgba(37, 99, 235, 0.35);
+    transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+    width: 100%;
+}
+
+body.contact-page .contact-submit-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.03);
+    box-shadow: 0 16px 40px rgba(37, 99, 235, 0.45);
+}
+
+body.contact-page .contact-submit-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.30);
+}
+
+/* ====== RIGHT INFO CARD ====== */
+
+body.contact-page .contact-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background: rgba(37, 99, 235, 0.06);
+    color: #1d4ed8;
+    border: 1px solid rgba(129, 140, 248, 0.5);
+    margin-bottom: 10px;
+}
+
+body.contact-page .contact-info-text {
+    font-size: 0.9rem;
+    color: #6b7280;
+    margin-bottom: 14px;
+}
+
+body.contact-page .contact-info-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding: 0;
+}
+
+body.contact-page .contact-info-list li {
+    font-size: 0.9rem;
+    color: #4b5563;
+}
+
+body.contact-page .contact-info-list .label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 2px;
+}
+
+body.contact-page .contact-info-list a {
+    text-decoration: none;
+    color: #2563eb;
+}
+
+body.contact-page .contact-info-list a:hover {
+    text-decoration: underline;
+}
+
+body.contact-page .contact-note {
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+
+/* ====== RESPONSIVE ====== */
+
+@media (max-width: 900px) {
+    body.contact-page .contact-section {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    body.contact-page .contact-page-container {
+        padding: 72px 12px 32px;
+    }
+
+    body.contact-page .contact-form-card,
+    body.contact-page .contact-info-card {
+        padding: 18px 16px;
+        border-radius: 18px;
+    }
+
+    body.contact-page .contact-header h1 {
+        font-size: 1.8rem;
+    }
+}
