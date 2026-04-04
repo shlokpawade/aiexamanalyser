@@ -165,7 +165,7 @@ async function analyze(text) {
 }
 
 // ✅ BUTTON HANDLER (FIXED)
-document.getElementById("analyzeBtn").addEventListener("click", async () => {
+document.querySelector(".analyze-btn").addEventListener("click", async () => {
   const fileInput = document.getElementById("fileInput");
   const resultBox = document.getElementById("output"); // ✅ FIXED
 
