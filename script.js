@@ -1,15 +1,37 @@
+
 const WORKER_URL = "https://steep-rain-8637.pawadesh lok.workers.dev".replace(" ", "");
 
-// ✅ Delay (for retry only)
+// ✅ Delay
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// ✅ SAFE API (no timeout crash)
+// ✅ SMART CHUNKING (MAX 10 CHUNKS ONLY)
+function splitIntoChunks(text) {
+  const MAX_CHUNKS = 10;
+
+  text = text.replace(/\s+/g, " ").trim();
+
+  const length = text.length;
+
+  if (length < 2000) return [text];
+
+  const chunkSize = Math.ceil(length / MAX_CHUNKS);
+  let chunks = [];
+
+  for (let i = 0; i < length; i += chunkSize) {
+    chunks.push(text.slice(i, i + chunkSize));
+  }
+
+  console.log(`✅ Total chunks created: ${chunks.length}`);
+  return chunks;
+}
+
+// ✅ SAFE API CALL (NO SKIP / NO FAIL)
 async function callWorkerSafe(prompt) {
   let attempt = 0;
 
-  while (attempt < 5) {
+  while (true) {
     try {
       const res = await fetch(WORKER_URL, {
         method: "POST",
@@ -25,19 +47,17 @@ async function callWorkerSafe(prompt) {
         return data.output;
       }
 
-      throw new Error("Empty");
+      throw new Error("Empty response");
 
     } catch (err) {
       attempt++;
-      console.log(`🔁 Retry ${attempt}`);
-      await delay(1200);
+      console.log(`🔁 Retry attempt ${attempt}`);
+      await delay(1500);
     }
   }
-
-  return "";
 }
 
-// 🔥 YOUR PROMPT (UNCHANGED)
+// 🔥 YOUR CHUNK PROMPT (UNCHANGED)
 function buildChunkPrompt(chunk) {
   return `
 You are an expert exam paper analyzer.
@@ -132,141 +152,75 @@ ${chunkAnalyses.join("\n")}
 `;
 }
 
-// 🔥 OCR (BEST VERSION)
-async function performOCR(file) {
-  const { createWorker } = Tesseract;
-  const worker = await createWorker("eng");
+// ✅ MAIN ANALYSIS WITH LIVE OUTPUT
+async function analyze(text, resultBox) {
 
-  const { data: { text } } = await worker.recognize(file);
+  // 🔥 Clean text (boost accuracy)
+  text = text
+    .replace(/Page \d+/gi, "")
+    .replace(/University.*?\n/gi, "")
+    .replace(/Time:.*?\n/gi, "")
+    .replace(/Marks:.*?\n/gi, "");
 
-  await worker.terminate();
-
-  return text;
-}
-
-// 🔥 SMART QUESTION FILTER (BIGGEST UPGRADE)
-function extractQuestionsOnly(text) {
-  const lines = text.split("\n");
-
-  return lines
-    .map(l => l.trim())
-    .filter(l =>
-      l.length > 15 &&
-      (
-        l.endsWith("?") ||
-        l.match(/^(what|explain|define|describe|compare|differentiate|write|list|state|discuss)/i)
-      )
-    )
-    .join("\n");
-}
-
-// 🔥 SMART CHUNKING (BY QUESTIONS)
-function splitIntoChunks(text) {
-  const lines = text.split("\n");
-  const chunkSize = 20; // 20 questions per chunk
-
-  let chunks = [];
-
-  for (let i = 0; i < lines.length; i += chunkSize) {
-    chunks.push(lines.slice(i, i + chunkSize).join("\n"));
-  }
-
-  return chunks;
-}
-
-// 🚀 PARALLEL PROCESSING (FAST)
-async function processChunksParallel(chunks, concurrency = 4) {
-  let results = [];
-  let index = 0;
-
-  async function worker() {
-    while (index < chunks.length) {
-      const i = index++;
-      console.log(`Processing chunk ${i + 1}/${chunks.length}`);
-
-      const res = await callWorkerSafe(buildChunkPrompt(chunks[i]));
-      results[i] = res;
-    }
-  }
-
-  let workers = [];
-  for (let i = 0; i < concurrency; i++) {
-    workers.push(worker());
-  }
-
-  await Promise.all(workers);
-  return results;
-}
-
-// 🔥 FINAL ANALYZE (OPTIMIZED PIPELINE)
-async function analyze(text) {
-
-  // 1️⃣ Clean
-  text = text.replace(/[^\x00-\x7F]/g, "").trim();
-
-  // 2️⃣ Extract only questions (CRITICAL)
-  text = extractQuestionsOnly(text);
-
-  console.log("Filtered question text length:", text.length);
-
-  // 3️⃣ Chunk by questions
   const chunks = splitIntoChunks(text);
+  let results = [];
 
-  console.log(`🚀 Final chunks: ${chunks.length}`);
+  resultBox.innerText = `🚀 Starting analysis...\n\n`;
 
-  // 4️⃣ Process
-  const results = await processChunksParallel(chunks, 4);
+  for (let i = 0; i < chunks.length; i++) {
+    resultBox.innerText += `📄 Processing chunk ${i + 1}/${chunks.length}...\n`;
 
-  // 5️⃣ Merge
-  return await callWorkerSafe(buildMergePrompt(results));
-}
+    const res = await callWorkerSafe(buildChunkPrompt(chunks[i]));
+    results.push(res);
 
-// ✅ FILE TEXT EXTRACTION
-async function extractText(file) {
+    resultBox.innerText += `✅ Chunk ${i + 1} done\n\n`;
 
-  if (file.type.startsWith("image/")) {
-    return await performOCR(file);
+    await delay(500);
   }
 
-  const text = await file.text();
+  resultBox.innerText += `\n🔄 Merging final results...\n`;
 
-  if (text.length < 50) {
-    return await performOCR(file);
-  }
+  const finalResult = await callWorkerSafe(buildMergePrompt(results));
 
-  return text;
+  return finalResult;
 }
 
-// ✅ BUTTON HANDLER
+// ✅ BUTTON HANDLER (ERROR SAFE + LIVE UI)
 document.addEventListener("DOMContentLoaded", () => {
 
-  document.getElementById("analyzeBtn").addEventListener("click", async () => {
+  const analyzeBtn = document.getElementById("analyzeBtn");
+  const fileInput = document.getElementById("fileInput");
+  const resultBox = document.getElementById("output");
 
-    const fileInput = document.getElementById("fileInput");
-    const resultBox = document.getElementById("output");
+  if (!analyzeBtn || !fileInput || !resultBox) {
+    console.error("❌ Missing HTML elements");
+    return;
+  }
+
+  analyzeBtn.addEventListener("click", async () => {
 
     if (!fileInput.files.length) {
       alert("Please upload files");
       return;
     }
 
-    resultBox.innerText = "Processing smart analysis... ⏳";
+    resultBox.innerText = "⏳ Reading files...\n";
 
     try {
       let fullText = "";
 
       for (let file of fileInput.files) {
-        const text = await extractText(file);
+        const text = await file.text(); // OCR not needed for text PDFs
         fullText += text + "\n";
       }
 
-      const output = await analyze(fullText);
+      const output = await analyze(fullText, resultBox);
 
-      resultBox.innerText = output;
+      resultBox.innerText = "\n\n🎉 FINAL RESULT:\n\n" + output;
 
     } catch (err) {
       console.error(err);
-      resultBox.innerText = "Error occurred ❌";
+      resultBox.innerText = "❌ Error occurred";
     }
 
   });
