@@ -1,43 +1,32 @@
-
 const WORKER_URL = "https://steep-rain-8637.pawadesh lok.workers.dev".replace(" ", "");
 
-// ✅ Delay
+// ======================
+// DELAY
+// ======================
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// ✅ SMART CHUNKING (MAX 10 CHUNKS ONLY)
-function splitIntoChunks(text) {
-  const MAX_CHUNKS = 10;
-
-  text = text.replace(/\s+/g, " ").trim();
-
-  const length = text.length;
-
-  if (length < 2000) return [text];
-
-  const chunkSize = Math.ceil(length / MAX_CHUNKS);
-  let chunks = [];
-
-  for (let i = 0; i < length; i += chunkSize) {
-    chunks.push(text.slice(i, i + chunkSize));
-  }
-
-  console.log(`✅ Total chunks created: ${chunks.length}`);
-  return chunks;
-}
-
-// ✅ SAFE API CALL (NO SKIP / NO FAIL)
+// ======================
+// SAFE API CALL
+// ======================
 async function callWorkerSafe(prompt) {
-  let attempt = 0;
+  const MAX_RETRIES = 3;
+  const TIMEOUT = 15000;
 
-  while (true) {
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), TIMEOUT);
+
       const res = await fetch(WORKER_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: prompt })
+        body: JSON.stringify({ text: prompt }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!res.ok) throw new Error("Server error");
 
@@ -50,177 +39,272 @@ async function callWorkerSafe(prompt) {
       throw new Error("Empty response");
 
     } catch (err) {
-      attempt++;
-      console.log(`🔁 Retry attempt ${attempt}`);
-      await delay(1500);
+      console.log(`⚠️ Retry ${attempt}`);
+      await delay(1000);
     }
   }
+
+  return "";
 }
 
-// 🔥 YOUR CHUNK PROMPT (UNCHANGED)
-function buildChunkPrompt(chunk) {
+// ======================
+// OCR FUNCTION
+// ======================
+async function performOCR(image) {
+  const worker = await Tesseract.createWorker("eng");
+
+  const { data: { text } } = await worker.recognize(image, {
+    tessedit_pageseg_mode: 6
+  });
+
+  await worker.terminate();
+  return text;
+}
+
+// ======================
+// MERGE PDF + OCR TEXT
+// ======================
+function mergeTexts(pdfText, ocrText) {
+
+  if (ocrText.length > pdfText.length * 1.5) {
+    return ocrText;
+  }
+
+  if (pdfText.length > 1000) {
+    return pdfText;
+  }
+
+  return pdfText + "\n" + ocrText;
+}
+
+// ======================
+// HYBRID EXTRACTION
+// ======================
+async function extractText(file) {
+
+  // IMAGE
+  if (file.type.startsWith("image/")) {
+    return await performOCR(file);
+  }
+
+  // PDF
+  if (file.type === "application/pdf") {
+
+    const pdf = await pdfjsLib.getDocument(URL.createObjectURL(file)).promise;
+
+    let pdfText = "";
+    let ocrText = "";
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+
+      console.log(`📄 Page ${i}`);
+
+      const page = await pdf.getPage(i);
+
+      // ---- TEXT EXTRACTION ----
+      const content = await page.getTextContent();
+      const text = content.items.map(i => i.str).join(" ");
+      pdfText += "\n" + text;
+
+      // ---- OCR ----
+      const viewport = page.getViewport({ scale: 3 });
+
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+
+      await page.render({ canvasContext: ctx, viewport }).promise;
+
+      const ocr = await performOCR(canvas);
+      ocrText += "\n" + ocr;
+    }
+
+    return mergeTexts(pdfText, ocrText);
+  }
+
+  // TEXT FILE
+  return await file.text();
+}
+
+// ======================
+// CLEAN TEXT
+// ======================
+function cleanText(text) {
+  return text
+    .replace(/[^\x00-\x7F]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// ======================
+// MAX 10 CHUNKS
+// ======================
+function splitIntoChunks(text) {
+  const MAX = 10;
+  const size = Math.ceil(text.length / MAX);
+
+  let chunks = [];
+  for (let i = 0; i < text.length; i += size) {
+    chunks.push(text.slice(i, i + size));
+  }
+
+  return chunks;
+}
+
+// ======================
+// SUBJECT DETECTION
+// ======================
+async function detectSubject(text) {
+  const prompt = `
+Identify subject of this exam paper in 3-5 words only.
+
+TEXT:
+${text.slice(0, 2000)}
+`;
+
+  return await callWorkerSafe(prompt);
+}
+
+// ======================
+// EXTRACT QUESTIONS
+// ======================
+function buildChunkPrompt(chunk, subject) {
   return `
-You are an expert exam paper analyzer.
+You are an expert exam parser.
 
-Your job is to carefully read the given text and extract ONLY valid exam questions.
+SUBJECT: ${subject}
 
-STRICT RULES:
-- Extract only meaningful questions
-- Ignore headings, instructions, random text
-- Ignore incomplete or broken sentences
+Extract ONLY complete and meaningful questions.
+
+Rules:
+- No headings
+- No instructions
+- No incomplete text
 - Fix grammar if needed
-- Normalize abbreviations:
-  - DFS = Depth First Search
-  - AI = Artificial Intelligence
-  - DBMS = Database Management System
-
-VERY IMPORTANT:
-- If questions are similar but worded differently, rewrite them in a standard clear format
-- Each question must be clean and complete
-
-OUTPUT FORMAT (STRICT):
-Questions:
-- Question 1
-- Question 2
-- Question 3
-
-DO NOT:
-- Add explanations
-- Add extra text
-- Return anything except the list
 
 TEXT:
 ${chunk}
 `;
 }
 
-// 🔥 YOUR MERGE PROMPT (UNCHANGED)
-function buildMergePrompt(chunkAnalyses) {
-  return `
-You are cleaning and organizing exam questions.
+// ======================
+// CLEAN QUESTIONS
+// ======================
+async function refineQuestions(results) {
+  const prompt = `
+Clean and standardize questions.
 
-Rules:
 - Remove duplicates
-- Remove incomplete questions
-- Keep only meaningful questions
-- Do NOT add anything new
+- Remove incomplete ones
+- Keep only exam-ready questions
 
-🔥 VERY IMPORTANT (CORE LOGIC):
-- Questions with SAME MEANING must be treated as SAME
-- Do NOT rely on exact wording
-- Group similar questions under ONE concept
+DATA:
+${results.join("\n")}
+`;
 
-Examples:
-- "Explain DFS" = "Explain Depth First Search"
-- "Define normalization" = "What is normalization"
-- "Explain A* algorithm" = "Describe A star algorithm"
+  return await callWorkerSafe(prompt);
+}
 
-TASK:
+// ======================
+// CLUSTER + PREDICT
+// ======================
+function buildMergePrompt(cleaned) {
+  return `
+Analyze and cluster exam questions.
 
-1. Merge all questions
-2. Group similar meaning questions
-3. Count repetition based on CONCEPT (not wording)
-4. Identify important topics
-5. Predict most probable exam questions
+Tasks:
+- Group by topic
+- Count frequency
+- Detect repeated concepts
+- Predict important questions
 
 OUTPUT:
 
-📌 Final Questions:
-- clean unique question
-
-🔁 Repeated Questions (Concept-based):
-- Concept → example questions (2 times)
-- Concept → example questions (3 times)
-
-🧩 Important Topics:
-- topic
-
-🎯 Predicted Questions (HIGH PROBABILITY):
+📌 Questions:
 - question
 
-🗓️ Study Strategy:
-- Focus on repeated concepts
-- Practice variations of same concept
+🧠 Topics:
+- Topic → (count)
 
-IMPORTANT:
-- Complete full response
-- Do NOT cut output
-- Use meaning-based grouping
+🎯 Important Questions:
+- question
 
 DATA:
-${chunkAnalyses.join("\n")}
+${cleaned}
 `;
 }
 
-// ✅ MAIN ANALYSIS WITH LIVE OUTPUT
-async function analyze(text, resultBox) {
+// ======================
+// MAIN ANALYSIS
+// ======================
+async function analyze(text, output) {
 
-  // 🔥 Clean text (boost accuracy)
-  text = text
-    .replace(/Page \d+/gi, "")
-    .replace(/University.*?\n/gi, "")
-    .replace(/Time:.*?\n/gi, "")
-    .replace(/Marks:.*?\n/gi, "");
+  output.innerText = "🔍 Detecting subject...\n";
+
+  const subject = await detectSubject(text);
+
+  output.innerText += `📘 ${subject}\n\n`;
+
+  text = cleanText(text);
 
   const chunks = splitIntoChunks(text);
+
   let results = [];
 
-  resultBox.innerText = `🚀 Starting analysis...\n\n`;
-
   for (let i = 0; i < chunks.length; i++) {
-    resultBox.innerText += `📄 Processing chunk ${i + 1}/${chunks.length}...\n`;
+    output.innerText += `📄 Chunk ${i + 1}/10\n`;
 
-    const res = await callWorkerSafe(buildChunkPrompt(chunks[i]));
+    const res = await callWorkerSafe(
+      buildChunkPrompt(chunks[i], subject)
+    );
+
     results.push(res);
-
-    resultBox.innerText += `✅ Chunk ${i + 1} done\n\n`;
-
-    await delay(500);
   }
 
-  resultBox.innerText += `\n🔄 Merging final results...\n`;
+  output.innerText += "\n🧹 Cleaning...\n";
 
-  const finalResult = await callWorkerSafe(buildMergePrompt(results));
+  const cleaned = await refineQuestions(results);
 
-  return finalResult;
+  output.innerText += "\n🧠 Clustering...\n";
+
+  return await callWorkerSafe(buildMergePrompt(cleaned));
 }
 
-// ✅ BUTTON HANDLER (ERROR SAFE + LIVE UI)
+// ======================
+// BUTTON HANDLER
+// ======================
 document.addEventListener("DOMContentLoaded", () => {
 
-  const analyzeBtn = document.getElementById("analyzeBtn");
-  const fileInput = document.getElementById("fileInput");
-  const resultBox = document.getElementById("output");
+  const btn = document.getElementById("analyzeBtn");
+  const input = document.getElementById("fileInput");
+  const output = document.getElementById("output");
 
-  if (!analyzeBtn || !fileInput || !resultBox) {
-    console.error("❌ Missing HTML elements");
-    return;
-  }
+  btn.addEventListener("click", async () => {
 
-  analyzeBtn.addEventListener("click", async () => {
-
-    if (!fileInput.files.length) {
-      alert("Please upload files");
+    if (!input.files.length) {
+      alert("Upload file");
       return;
     }
 
-    resultBox.innerText = "⏳ Reading files...\n";
+    output.innerText = "⏳ Processing...\n";
 
     try {
-      let fullText = "";
+      let text = "";
 
-      for (let file of fileInput.files) {
-        const text = await file.text(); // OCR not needed for text PDFs
-        fullText += text + "\n";
+      for (let file of input.files) {
+        const extracted = await extractText(file);
+        text += extracted + "\n";
       }
 
-      const output = await analyze(fullText, resultBox);
+      const result = await analyze(text, output);
 
-      resultBox.innerText = "\n\n🎉 FINAL RESULT:\n\n" + output;
+      output.innerText = "\n\n🎉 FINAL OUTPUT:\n\n" + result;
 
     } catch (err) {
       console.error(err);
-      resultBox.innerText = "❌ Error occurred";
+      output.innerText = "❌ Error occurred";
     }
 
   });
