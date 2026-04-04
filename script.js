@@ -1,33 +1,36 @@
-
 // ===============================================
-//  AI EXAM ANALYZER – FRONTEND (AUTO-CHUNK + MERGE)
+//  AI EXAM ANALYZER – FINAL POLISH (PROMPTS SAME)
 // ===============================================
 
-// 🔗 Your Cloudflare Worker URL
 const WORKER_URL = "https://steep-rain-8637.pawadeshlok.workers.dev/";
 
-// Store latest raw AI markdown output for WhatsApp sharing
 window.latestAIOutput = "";
+let startTime = 0;
 
-// 🔧 PDF.js worker
+// PDF.js worker
 if (window.pdfjsLib) {
   pdfjsLib.GlobalWorkerOptions.workerSrc =
     "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js";
 }
 
 // ===============================================
-//  UI HELPERS
+// UI HELPERS
 // ===============================================
 function updateLoading(text, progress) {
   const box = document.getElementById("loadingContainer");
   box.classList.remove("hidden");
-  document.getElementById("loadingText").innerText = text;
+
+  const timeElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+
+  document.getElementById("loadingText").innerText =
+    `${text} (${timeElapsed}s)`;
+
   document.getElementById("progressFill").style.width =
     Math.min(progress, 100) + "%";
 }
 
 // ===============================================
-//  PDF → IMAGE → OCR TEXT
+// OCR
 // ===============================================
 async function extractPDFText(file) {
   let finalText = "";
@@ -37,7 +40,7 @@ async function extractPDFText(file) {
 
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
     updateLoading(
-      `📷 OCR: ${file.name} – page ${pageNum}/${pdf.numPages}…`,
+      `📷 OCR: ${file.name} – page ${pageNum}/${pdf.numPages}`,
       5 + (pageNum / pdf.numPages) * 30
     );
 
@@ -52,10 +55,7 @@ async function extractPDFText(file) {
 
     await page.render({ canvasContext: ctx, viewport }).promise;
 
-    const { data: { text } } = await Tesseract.recognize(
-      canvas,
-      "eng"
-    );
+    const { data: { text } } = await Tesseract.recognize(canvas, "eng");
 
     finalText += "\n\n" + text;
   }
@@ -64,10 +64,10 @@ async function extractPDFText(file) {
 }
 
 // ===============================================
-//  🔥 FIXED CHUNKING (ONLY CHANGE)
+// 🔥 FIXED CHUNKING
 // ===============================================
 function splitIntoChunks(fullText) {
-  const MAX_CHUNK_SIZE = 2500; // 🔥 FIX
+  const MAX_CHUNK_SIZE = 1800;
 
   const chunks = [];
   let start = 0;
@@ -93,7 +93,7 @@ function splitIntoChunks(fullText) {
 }
 
 // ===============================================
-//  PROMPTS (UNCHANGED ✅)
+// PROMPTS (UNCHANGED 🔒)
 // ===============================================
 function buildChunkPrompt(chunkText, index, total) {
   return `
@@ -224,31 +224,44 @@ ${chunkAnalyses.map((txt, i) => `\n\n===== CHUNK ANALYSIS ${i + 1} =====\n${txt}
 }
 
 // ===============================================
-//  API CALL (FIXED)
+// API CALL (TIMEOUT SAFE)
 // ===============================================
-async function callWorker(prompt, label = "analysis") {
-  const response = await fetch(WORKER_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: prompt }),
-  });
+async function callWorker(prompt) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25000);
 
-  if (!response.ok) {
-    throw new Error("Server error: " + response.status);
+  try {
+    const response = await fetch(WORKER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: prompt }),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      throw new Error("Server error");
+    }
+
+    const data = await response.json();
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    return data.output || "";
+
+  } catch (err) {
+    if (err.name === "AbortError") {
+      throw new Error("⏳ Request timeout (reduce file size)");
+    }
+    throw err;
   }
-
-  const data = await response.json();
-
-  if (data.error) {
-    console.error("Worker error (" + label + "):", data.error);
-    throw new Error(data.error);
-  }
-
-  return data.output || "";
 }
 
 // ===============================================
-//  MAIN ANALYZE FUNCTION (UNCHANGED)
+// MAIN ANALYSIS
 // ===============================================
 async function analyze() {
   const files = document.getElementById("fileInput").files;
@@ -259,68 +272,58 @@ async function analyze() {
     return;
   }
 
+  startTime = Date.now();
+
   outputBox.innerHTML = "";
-  updateLoading("Starting OCR + analysis…", 3);
+  updateLoading("🚀 Starting analysis...", 2);
 
   let combinedText = "";
 
-  const fileArray = Array.from(files);
-  for (let i = 0; i < fileArray.length; i++) {
-    const f = fileArray[i];
-    updateLoading(
-      `Processing file ${i + 1}/${fileArray.length}: ${f.name}`,
-      5 + (i / fileArray.length) * 20
-    );
-
-    const text = await extractPDFText(f);
-    combinedText += `\n\n===== PAPER: ${f.name} =====\n\n${text}`;
-  }
-
-  if (!combinedText.trim()) {
-    outputBox.innerHTML =
-      "<div class='error'>❌ OCR produced no readable text.</div>";
-    updateLoading("Error ❌", 100);
-    return;
+  for (let i = 0; i < files.length; i++) {
+    const text = await extractPDFText(files[i]);
+    combinedText += `\n\n===== PAPER: ${files[i].name} =====\n\n${text}`;
   }
 
   const chunks = splitIntoChunks(combinedText);
-  const totalChunks = chunks.length;
+  const results = [];
 
-  const chunkAnalyses = [];
-  for (let i = 0; i < totalChunks; i++) {
-    const chunkPrompt = buildChunkPrompt(chunks[i], i + 1, totalChunks);
+  for (let i = 0; i < chunks.length; i++) {
+    const percent = 30 + ((i + 1) / chunks.length) * 40;
 
     updateLoading(
-      `✨ Analyzing chunk ${i + 1}/${totalChunks} with AI…`,
-      30 + ((i + 1) / totalChunks) * 40
+      `✨ Analyzing chunk ${i + 1}/${chunks.length}`,
+      percent
     );
 
-    const result = await callWorker(chunkPrompt);
-    chunkAnalyses.push(result);
+    const res = await callWorker(
+      buildChunkPrompt(chunks[i], i + 1, chunks.length)
+    );
+
+    results.push(res);
   }
 
-  updateLoading("🧠 Merging all analyses…", 85);
+  updateLoading("🧠 Merging results...", 85);
 
-  const finalOutput = await callWorker(buildMergePrompt(chunkAnalyses));
+  const final = await callWorker(buildMergePrompt(results));
 
-  window.latestAIOutput = finalOutput;
+  window.latestAIOutput = final;
 
   document.querySelector(".results-title").classList.remove("hidden");
 
-  const html = marked.parse(finalOutput, { breaks: true, gfm: true });
+  const html = marked.parse(final, { breaks: true, gfm: true });
   outputBox.innerHTML = html;
 
-  updateLoading("Done ✔", 100);
+  updateLoading("✅ Completed!", 100);
 }
 
 // ===============================================
-//  EVENTS
+// EVENTS
 // ===============================================
 document.getElementById("analyzeBtn").addEventListener("click", () => {
   analyze().catch((err) => {
     console.error(err);
     document.getElementById("output").innerHTML =
-      "<div class='error'>❌ " + err.message + "</div>";
+      `<div class='error'>❌ ${err.message}</div>`;
     updateLoading("Error ❌", 100);
   });
 });
