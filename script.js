@@ -1,5 +1,5 @@
 // ===============================================
-//  AI EXAM ANALYZER – FINAL STABLE VERSION 🚀
+//  AI EXAM ANALYZER – FINAL PREMIUM VERSION 🚀
 // ===============================================
 
 const WORKER_URL = "https://steep-rain-8637.pawadeshlok.workers.dev/";
@@ -60,7 +60,7 @@ async function extractPDFText(file) {
 }
 
 // ===============================================
-// 🔥 CHUNKING
+// CHUNKING
 // ===============================================
 function splitIntoChunks(text) {
   const size = 800;
@@ -74,133 +74,70 @@ function splitIntoChunks(text) {
 }
 
 // ===============================================
-// ✅ YOUR ORIGINAL PROMPTS (UNCHANGED)
+// 🔥 IMPROVED PROMPT (NO HALLUCINATION)
 // ===============================================
 function buildChunkPrompt(chunkText, index, total) {
   return `
-You are an expert exam-paper analyst.
+You are analyzing REAL exam paper content.
 
-This is **chunk ${index}/${total}** of a question paper.  
-Your job is to extract **REAL QUESTIONS ONLY**, NOT headings.
+STRICT RULES:
+- ONLY extract questions present in the text
+- DO NOT create or guess anything
+- Ignore headings like "Attempt any 2"
+- Extract only meaningful exam questions
+- If nothing found → say "No valid questions found"
 
-⚠️ VERY IMPORTANT RULES:
-- IGNORE section headings like:
-  - "Q.1 (20 Marks)"
-  - "Solve any Four"
-  - "Attempt any Two"
-  - "Q.2 Short Notes"
-- Extract ONLY the **actual sub-questions**, e.g.:
-  - "Explain DBMS architecture"
-  - "What is normalization?"
-  - "Define 3NF"
-- If you see a heading → skip it.
-- If you see sub-questions (a, b, c, 1, 2, 3) → treat each one as an independent question.
-
-Your tasks for THIS CHUNK ONLY:
-
-1. Extract all REAL QUESTIONS  
-2. Identify repeated or similar questions  
-3. Identify repeated topics  
-4. Mark each important question  
-5. Give mini study hints  
-
-Return the result in this format:
-
----
-## 📌 Summary (Chunk ${index}/${total})
-- Difficulty Level:
-- Unique Real Questions Found:
-- Topics Found:
-
-## 🔁 Real Repeated Questions (Chunk ${index}/${total})
-- …
-
-## 🧩 Repeated Topics (Chunk ${index}/${total})
-- …
-
-## ⭐ Important Questions (Chunk ${index}/${total})
-- Very Important:
-  - …
-- Important:
-  - …
-- Good to Know:
-  - …
-
-## 🎯 Study Hints (Chunk ${index}/${total})
-- …
----
-
-Here is the chunk text:
-
+TEXT:
 ${chunkText}
+
+Return:
+
+Chunk ${index}/${total}
+
+Questions:
+- ...
+
+Repeated:
+- ...
+
+Topics:
+- ...
 `;
 }
 
+// ===============================================
+// 🔥 MERGE + PREDICTION FEATURE
+// ===============================================
 function buildMergePrompt(chunkAnalyses) {
   return `
-You are merging multiple partial analyses of the SAME exam papers.
+You are combining analysis of exam papers.
 
-VERY IMPORTANT RULES:
-- Do NOT include headings like:
-  - "Q.1 (20 Marks)"
-  - "Solve any Four"
-  - "Attempt any Two"
-- Only include ACTUAL sub-questions found in the chunks.
+STRICT RULES:
+- DO NOT add new questions
+- ONLY use given data
+- Remove duplicates
+- Identify most repeated patterns
 
-Your tasks:
+Return:
 
-1. Merge REAL extracted questions from all chunks  
-2. Combine duplicates (even if wording differs slightly)  
-3. Identify total repeated questions  
-4. Identify true repeated topics  
-5. Produce clear difficulty analysis  
-6. Create final study plan  
-7. DO NOT invent anything not found in the chunks  
+📌 Final Questions:
+- ...
 
-Return final result in exactly this format:
+🔁 Repeated Questions:
+- ...
 
----
-## 📌 Summary
-- Difficulty Level:
-- Total Real Questions Analyzed:
-- Total Topics Identified:
+🧩 Important Topics:
+- ...
 
-## 🔁 Most Repeated Questions
-- Actual Question (x times)
-- …
+🎯 Predicted Questions (VERY IMPORTANT):
+- (Top likely exam questions based on repetition)
 
-## 🧩 Most Repeated Topics
-- Topic Name – xx%  
-- …
+🗓️ Study Plan:
+- What to focus
+- What to skip
 
-## ⭐ Most Important Questions
-- Very Important:
-  - …
-- Important:
-  - …
-- Good to Know:
-  - …
-
-## 🎯 What to Study to Pass
-- Essential Topics:
-  - …
-- Optional but Helpful:
-  - …
-
-## 🗓️ Study Plan
-**1-Day Plan:**
-- …
-
-**3-Day Plan:**
-- …
-
-**7-Day Plan:**
-- …
----
-
-Here are the partial analyses:
-
-${chunkAnalyses.map((txt, i) => `\n\n===== CHUNK ANALYSIS ${i + 1} =====\n${txt}`).join("")}
+DATA:
+${chunkAnalyses.join("\n")}
 `;
 }
 
@@ -256,7 +193,7 @@ async function analyze() {
     text += await extractPDFText(f);
   }
 
-  // 🔥 LIMIT TEXT
+  // LIMIT TEXT
   if (text.length > 6000) {
     text = text.slice(0, 6000);
   }
@@ -274,7 +211,7 @@ async function analyze() {
     results.push(res);
   }
 
-  updateLoading("🧠 Merging...", 85);
+  updateLoading("🧠 Generating predictions...", 85);
 
   const final = await callWorker(buildMergePrompt(results));
 
