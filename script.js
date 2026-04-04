@@ -124,27 +124,39 @@ Rules:
 - Keep only meaningful questions
 - Do NOT add anything new
 
+🔥 VERY IMPORTANT (NEW LOGIC):
+- Questions with SAME MEANING must be treated as SAME
+- Do NOT rely on exact wording
+- Group similar questions under ONE concept
+
+Examples:
+- "Explain DFS" = "Explain Depth First Search"
+- "Define normalization" = "What is normalization"
+- "Explain A* algorithm" = "Describe A star algorithm"
+
 OUTPUT:
 
 📌 Final Questions:
-- question
+- clean unique question
 
-🔁 Repeated Questions:
-- question (2 times)
+🔁 Repeated Questions (Concept-based):
+- Concept → example questions (2 times)
+- Concept → example questions (3 times)
 
 🧩 Important Topics:
 - topic
 
 🎯 Predicted Questions:
-- most repeated questions
+- most repeated concepts
 
 🗓️ Study Strategy:
-- Focus on repeated topics
-- Practice predicted questions
+- Focus on repeated concepts
+- Practice variations of same concept
 
 IMPORTANT:
 - Complete full response
 - Do NOT cut output
+- Use meaning-based grouping (NOT exact match)
 
 DATA:
 ${chunkAnalyses.join("\n")}
