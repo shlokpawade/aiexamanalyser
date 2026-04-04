@@ -1,5 +1,5 @@
 // ===============================================
-//  AI EXAM ANALYZER – FINAL PREMIUM VERSION 🚀
+//  AI EXAM ANALYZER – FINAL PRO VERSION 🚀
 // ===============================================
 
 const WORKER_URL = "https://steep-rain-8637.pawadeshlok.workers.dev/";
@@ -60,6 +60,16 @@ async function extractPDFText(file) {
 }
 
 // ===============================================
+// CLEAN OCR TEXT (🔥 IMPORTANT)
+// ===============================================
+function cleanText(text) {
+  return text
+    .replace(/\s+/g, " ")
+    .replace(/[^a-zA-Z0-9?.\-:,() ]/g, "")
+    .trim();
+}
+
+// ===============================================
 // CHUNKING
 // ===============================================
 function splitIntoChunks(text) {
@@ -74,67 +84,66 @@ function splitIntoChunks(text) {
 }
 
 // ===============================================
-// 🔥 IMPROVED PROMPT (NO HALLUCINATION)
+// 🔥 ULTRA-STRICT CHUNK PROMPT
 // ===============================================
 function buildChunkPrompt(chunkText, index, total) {
   return `
-You are analyzing REAL exam paper content.
+You are analyzing a REAL university exam paper.
 
 STRICT RULES:
-- ONLY extract questions present in the text
-- DO NOT create or guess anything
-- Ignore headings like "Attempt any 2"
-- Extract only meaningful exam questions
-- If nothing found → say "No valid questions found"
+- ONLY extract questions EXACTLY as written
+- DO NOT modify wording
+- DO NOT create new questions
+- IGNORE instructions like "Attempt any"
+- If unclear → SKIP
 
 TEXT:
 ${chunkText}
 
-Return:
+OUTPUT:
 
 Chunk ${index}/${total}
 
 Questions:
-- ...
+- exact question
 
 Repeated:
-- ...
+- repeated question
 
 Topics:
-- ...
+- short topic
 `;
 }
 
 // ===============================================
-// 🔥 MERGE + PREDICTION FEATURE
+// 🔥 FINAL MERGE + PREDICTION PROMPT
 // ===============================================
 function buildMergePrompt(chunkAnalyses) {
   return `
-You are combining analysis of exam papers.
+Combine exam analysis.
 
-STRICT RULES:
+STRICT:
 - DO NOT add new questions
 - ONLY use given data
 - Remove duplicates
-- Identify most repeated patterns
 
-Return:
+OUTPUT:
 
 📌 Final Questions:
-- ...
+- question
 
-🔁 Repeated Questions:
-- ...
+🔁 Repeated Questions (with count):
+- question (2 times)
 
 🧩 Important Topics:
-- ...
+- topic
 
-🎯 Predicted Questions (VERY IMPORTANT):
-- (Top likely exam questions based on repetition)
+🎯 Predicted Questions:
+- most repeated questions
 
-🗓️ Study Plan:
-- What to focus
-- What to skip
+🗓️ Study Strategy:
+- Focus on repeated topics
+- Ignore rare topics
 
 DATA:
 ${chunkAnalyses.join("\n")}
@@ -193,7 +202,10 @@ async function analyze() {
     text += await extractPDFText(f);
   }
 
-  // LIMIT TEXT
+  // 🔥 CLEAN TEXT
+  text = cleanText(text);
+
+  // 🔥 LIMIT TEXT
   if (text.length > 6000) {
     text = text.slice(0, 6000);
   }
