@@ -5,9 +5,9 @@ function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// ✅ Chunking (optimized)
+// ✅ Bigger chunks (optimized)
 function splitIntoChunks(text) {
-  const size = 400;
+  const size = 5000;
   let chunks = [];
 
   for (let i = 0; i < text.length; i += size) {
@@ -17,11 +17,11 @@ function splitIntoChunks(text) {
   return chunks;
 }
 
-// ✅ Safe API call (never skips)
+// ✅ Safe API
 async function callWorkerSafe(prompt) {
   let attempt = 0;
 
-  while (true) {
+  while (attempt < 5) {
     try {
       const res = await fetch(WORKER_URL, {
         method: "POST",
@@ -41,13 +41,15 @@ async function callWorkerSafe(prompt) {
 
     } catch (err) {
       attempt++;
-      console.log(`🔁 Retry attempt ${attempt}`);
-      await delay(2000);
+      console.log(`🔁 Retry ${attempt}`);
+      await delay(1500);
     }
   }
+
+  return "";
 }
 
-// 🔥🔥🔥 YOUR PROMPT (UNCHANGED)
+// 🔥 YOUR PROMPT (UNCHANGED)
 function buildChunkPrompt(chunk) {
   return `
 You are an expert exam paper analyzer.
@@ -142,60 +144,100 @@ ${chunkAnalyses.join("\n")}
 `;
 }
 
+// 🚀 PARALLEL PROCESSING
+async function processChunksParallel(chunks, concurrency = 5) {
+  let results = [];
+  let index = 0;
+
+  async function worker() {
+    while (index < chunks.length) {
+      const i = index++;
+      console.log(`Processing chunk ${i + 1}/${chunks.length}`);
+
+      const res = await callWorkerSafe(buildChunkPrompt(chunks[i]));
+      results[i] = res;
+    }
+  }
+
+  let workers = [];
+  for (let i = 0; i < concurrency; i++) {
+    workers.push(worker());
+  }
+
+  await Promise.all(workers);
+  return results;
+}
+
+// 🔥 OCR FUNCTION (MAIN UPGRADE)
+async function performOCR(file) {
+  const { createWorker } = Tesseract;
+
+  const worker = await createWorker("eng");
+
+  console.log("🔍 OCR started...");
+
+  const { data: { text } } = await worker.recognize(file);
+
+  await worker.terminate();
+
+  return text;
+}
+
+// ✅ TEXT EXTRACTION (SMART)
+async function extractText(file) {
+
+  const fileType = file.type;
+
+  // 🖼️ IMAGE → OCR
+  if (fileType.startsWith("image/")) {
+    return await performOCR(file);
+  }
+
+  // 📄 TEXT PDF
+  const text = await file.text();
+
+  // If empty → fallback OCR
+  if (text.trim().length < 50) {
+    console.log("⚠️ Low text detected → using OCR fallback");
+    return await performOCR(file);
+  }
+
+  return text;
+}
+
 // ✅ MAIN ANALYSIS
 async function analyze(text) {
   const chunks = splitIntoChunks(text);
-  let results = [];
 
-  for (let i = 0; i < chunks.length; i++) {
-    console.log(`Processing chunk ${i + 1}/${chunks.length}`);
+  console.log(`Total chunks: ${chunks.length}`);
 
-    const res = await callWorkerSafe(buildChunkPrompt(chunks[i]));
-    results.push(res);
-
-    await delay(1000);
-  }
+  const results = await processChunksParallel(chunks, 5);
 
   console.log("Merging results...");
 
-  const finalResult = await callWorkerSafe(buildMergePrompt(results));
-
-  return finalResult;
+  return await callWorkerSafe(buildMergePrompt(results));
 }
 
-// ✅ FIXED BUTTON HANDLER (NO MORE NULL ERROR)
+// ✅ BUTTON HANDLER
 document.addEventListener("DOMContentLoaded", () => {
 
-  const analyzeBtn = document.getElementById("analyzeBtn");
-
-  if (!analyzeBtn) {
-    console.error("❌ analyzeBtn not found");
-    return;
-  }
-
-  analyzeBtn.addEventListener("click", async () => {
+  document.getElementById("analyzeBtn").addEventListener("click", async () => {
 
     const fileInput = document.getElementById("fileInput");
     const resultBox = document.getElementById("output");
 
-    if (!resultBox) {
-      console.error("❌ output element not found");
-      alert("Output box missing in HTML");
-      return;
-    }
-
-    if (!fileInput || !fileInput.files.length) {
+    if (!fileInput.files.length) {
       alert("Please upload files");
       return;
     }
 
-    resultBox.innerText = "Processing... Please wait ⏳";
+    resultBox.innerText = "Processing with OCR... ⏳";
 
     try {
       let fullText = "";
 
       for (let file of fileInput.files) {
-        const text = await file.text();
+        const text = await extractText(file);
         fullText += text + "\n";
       }
 
