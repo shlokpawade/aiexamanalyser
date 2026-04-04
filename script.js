@@ -1,4 +1,3 @@
-
 const WORKER_URL = "https://steep-rain-8637.pawadesh lok.workers.dev".replace(" ", "");
 
 // ✅ Delay
@@ -48,7 +47,7 @@ async function callWorkerSafe(prompt) {
   }
 }
 
-// 🔥🔥🔥 BEST CHUNK PROMPT (UNCHANGED)
+// 🔥🔥🔥 YOUR PROMPT (UNCHANGED)
 function buildChunkPrompt(chunk) {
   return `
 You are an expert exam paper analyzer.
@@ -85,7 +84,7 @@ ${chunk}
 `;
 }
 
-// 🔥 MERGE PROMPT (UNCHANGED)
+// 🔥 YOUR MERGE PROMPT (UNCHANGED)
 function buildMergePrompt(chunkAnalyses) {
   return `
 You are cleaning and organizing exam questions.
@@ -164,37 +163,51 @@ async function analyze(text) {
   return finalResult;
 }
 
-// ✅ BUTTON HANDLER (FIXED)
-document.querySelector(".analyze-btn").addEventListener("click", async () => {
-  const fileInput = document.getElementById("fileInput");
-  const resultBox = document.getElementById("output"); // ✅ FIXED
+// ✅ FIXED BUTTON HANDLER (NO MORE NULL ERROR)
+document.addEventListener("DOMContentLoaded", () => {
 
-  if (!resultBox) {
-    console.error("❌ output element not found");
+  const analyzeBtn = document.getElementById("analyzeBtn");
+
+  if (!analyzeBtn) {
+    console.error("❌ analyzeBtn not found");
     return;
   }
 
-  if (!fileInput.files.length) {
-    alert("Please upload files");
-    return;
-  }
+  analyzeBtn.addEventListener("click", async () => {
 
-  resultBox.innerText = "Processing... Please wait ⏳";
+    const fileInput = document.getElementById("fileInput");
+    const resultBox = document.getElementById("output");
 
-  try {
-    let fullText = "";
-
-    for (let file of fileInput.files) {
-      const text = await file.text();
-      fullText += text + "\n";
+    if (!resultBox) {
+      console.error("❌ output element not found");
+      alert("Output box missing in HTML");
+      return;
     }
 
-    const output = await analyze(fullText);
+    if (!fileInput || !fileInput.files.length) {
+      alert("Please upload files");
+      return;
+    }
 
-    resultBox.innerText = output;
+    resultBox.innerText = "Processing... Please wait ⏳";
 
-  } catch (err) {
-    console.error(err);
-    resultBox.innerText = "Error occurred ❌";
-  }
+    try {
+      let fullText = "";
+
+      for (let file of fileInput.files) {
+        const text = await file.text();
+        fullText += text + "\n";
+      }
+
+      const output = await analyze(fullText);
+
+      resultBox.innerText = output;
+
+    } catch (err) {
+      console.error(err);
+      resultBox.innerText = "Error occurred ❌";
+    }
+
+  });
+
 });
