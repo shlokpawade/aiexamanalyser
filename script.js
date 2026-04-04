@@ -1,10 +1,10 @@
+
 // ===============================================
-//  AI EXAM ANALYZER – FINAL PRO VERSION 🚀
+//  AI EXAM ANALYZER – ULTRA FINAL VERSION 🚀
 // ===============================================
 
 const WORKER_URL = "https://steep-rain-8637.pawadeshlok.workers.dev/";
 
-window.latestAIOutput = "";
 let startTime = 0;
 
 // PDF.js worker
@@ -60,11 +60,14 @@ async function extractPDFText(file) {
 }
 
 // ===============================================
-// CLEAN OCR TEXT (🔥 IMPORTANT)
+// 🔥 CLEAN OCR TEXT (CRITICAL)
 // ===============================================
 function cleanText(text) {
   return text
     .replace(/\s+/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/\.\s*\./g, ".")
+    .replace(/\s{2,}/g, " ")
     .replace(/[^a-zA-Z0-9?.\-:,() ]/g, "")
     .trim();
 }
@@ -84,31 +87,26 @@ function splitIntoChunks(text) {
 }
 
 // ===============================================
-// 🔥 ULTRA-STRICT CHUNK PROMPT
+// 🔥 ULTRA CLEAN EXTRACTION PROMPT
 // ===============================================
-function buildChunkPrompt(chunkText, index, total) {
+function buildChunkPrompt(chunkText) {
   return `
 You are analyzing a REAL university exam paper.
 
 STRICT RULES:
-- ONLY extract questions EXACTLY as written
-- DO NOT modify wording
-- DO NOT create new questions
-- IGNORE instructions like "Attempt any"
-- If unclear → SKIP
+- Extract ONLY complete and meaningful questions
+- Remove incomplete, broken, or OCR-noise sentences
+- Do NOT generate or guess anything
+- Do NOT modify wording
+- Ignore instructions like "Attempt any"
 
 TEXT:
 ${chunkText}
 
 OUTPUT:
 
-Chunk ${index}/${total}
-
 Questions:
-- exact question
-
-Repeated:
-- repeated question
+- full clean question
 
 Topics:
 - short topic
@@ -116,34 +114,43 @@ Topics:
 }
 
 // ===============================================
-// 🔥 FINAL MERGE + PREDICTION PROMPT
+// 🔥 FINAL INTELLIGENT MERGE PROMPT
 // ===============================================
 function buildMergePrompt(chunkAnalyses) {
   return `
-Combine exam analysis.
+You are an expert academic analyzer.
 
-STRICT:
-- DO NOT add new questions
-- ONLY use given data
+STRICT RULES:
+- Only use given questions
 - Remove duplicates
+- Remove incomplete or meaningless questions
+- Merge similar questions into one clean version
+- Improve grammar ONLY if necessary
+
+TASK:
+
+1. Create clean final question list
+2. Detect repeated questions with frequency
+3. Extract important topics
+4. Predict most likely exam questions
 
 OUTPUT:
 
-📌 Final Questions:
+📌 Final Questions (Clean):
 - question
 
-🔁 Repeated Questions (with count):
+🔁 Repeated Questions:
 - question (2 times)
 
 🧩 Important Topics:
 - topic
 
 🎯 Predicted Questions:
-- most repeated questions
+- high probability question
 
 🗓️ Study Strategy:
 - Focus on repeated topics
-- Ignore rare topics
+- Practice predicted questions
 
 DATA:
 ${chunkAnalyses.join("\n")}
@@ -171,13 +178,11 @@ async function callWorker(prompt) {
 
     const data = await res.json();
 
-    if (data.error) throw new Error(data.error);
-
     return data.output;
 
   } catch (err) {
     console.log("⚠️ Skipped chunk");
-    return "⚠️ Skipped due to timeout";
+    return "";
   }
 }
 
@@ -202,10 +207,8 @@ async function analyze() {
     text += await extractPDFText(f);
   }
 
-  // 🔥 CLEAN TEXT
   text = cleanText(text);
 
-  // 🔥 LIMIT TEXT
   if (text.length > 6000) {
     text = text.slice(0, 6000);
   }
@@ -214,16 +217,13 @@ async function analyze() {
   let results = [];
 
   for (let i = 0; i < chunks.length; i++) {
-    updateLoading(`✨ Chunk ${i + 1}/${chunks.length}`, 30 + (i / chunks.length) * 40);
+    updateLoading(`✨ Processing ${i + 1}/${chunks.length}`, 30 + (i / chunks.length) * 40);
 
-    const res = await callWorker(
-      buildChunkPrompt(chunks[i], i + 1, chunks.length)
-    );
-
-    results.push(res);
+    const res = await callWorker(buildChunkPrompt(chunks[i]));
+    if (res) results.push(res);
   }
 
-  updateLoading("🧠 Generating predictions...", 85);
+  updateLoading("🧠 Finalizing...", 85);
 
   const final = await callWorker(buildMergePrompt(results));
 
@@ -232,11 +232,11 @@ async function analyze() {
 }
 
 // ===============================================
-// EVENTS
+// EVENT
 // ===============================================
 document.getElementById("analyzeBtn").onclick = () => {
   analyze().catch(err => {
     document.getElementById("output").innerHTML =
-      `<div class='error'>❌ ${err.message}</div>`;
+      `<div class="error">❌ ${err.message}</div>`;
   });
 };
