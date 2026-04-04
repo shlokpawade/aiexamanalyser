@@ -1,4 +1,4 @@
-const WORKER_URL = "https://steep-rain-8637.pawadesh lok.workers.dev".replace(" ", "");
+const WORKER_URL = "https://steep-rain-8637.pawadeshlok.workers.dev".replace(" ", "");
 
 // ✅ Delay
 function delay(ms) {
