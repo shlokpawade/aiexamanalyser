@@ -1,342 +1,396 @@
-const WORKER_URL = "https://steep-rain-8637.pawadesh lok.workers.dev".replace(" ", "");
+// ===============================================
+//  AI EXAM ANALYZER – FRONTEND (AUTO-CHUNK + MERGE)
+// ===============================================
 
-// ======================
-// DELAY
-// ======================
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+// 🔗 Your Cloudflare Worker URL
+const WORKER_URL = "https://steep-rain-8637.pawadeshlok.workers.dev/"; // change if needed
+
+// Store latest raw AI markdown output for WhatsApp sharing
+window.latestAIOutput = "";
+
+// 🔧 PDF.js worker
+if (window.pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js";
 }
 
-// ======================
-// SAFE API CALL
-// ======================
-async function callWorkerSafe(prompt) {
-  const MAX_RETRIES = 3;
-  const TIMEOUT = 15000;
-
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), TIMEOUT);
-
-      const res = await fetch(WORKER_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: prompt }),
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!res.ok) throw new Error("Server error");
-
-      const data = await res.json();
-
-      if (data.output && data.output.trim() !== "") {
-        return data.output;
-      }
-
-      throw new Error("Empty response");
-
-    } catch (err) {
-      console.log(`⚠️ Retry ${attempt}`);
-      await delay(1000);
-    }
-  }
-
-  return "";
+// ===============================================
+//  UI HELPERS
+// ===============================================
+function updateLoading(text, progress) {
+  const box = document.getElementById("loadingContainer");
+  box.classList.remove("hidden");
+  document.getElementById("loadingText").innerText = text;
+  document.getElementById("progressFill").style.width =
+    Math.min(progress, 100) + "%";
 }
 
-// ======================
-// OCR
-// ======================
-async function performOCR(image) {
-  const worker = await Tesseract.createWorker("eng");
+// ===============================================
+//  PDF → IMAGE → OCR TEXT (for scanned PDFs)
+// ===============================================
+async function extractPDFText(file) {
+  let finalText = "";
 
-  const { data: { text } } = await worker.recognize(image, {
-    tessedit_pageseg_mode: 6
-  });
+  const loadingTask = pdfjsLib.getDocument(URL.createObjectURL(file));
+  const pdf = await loadingTask.promise;
 
-  await worker.terminate();
-  return text;
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    updateLoading(
+      `📷 OCR: ${file.name} – page ${pageNum}/${pdf.numPages}…`,
+      5 + (pageNum / pdf.numPages) * 30
+    );
+
+    const page = await pdf.getPage(pageNum);
+    const viewport = page.getViewport({ scale: 2 });
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+
+    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    // OCR this page
+    const { data: { text } } = await Tesseract.recognize(
+      canvas,
+      "eng",
+      { logger: (m) => console.log(m) }
+    );
+
+    finalText += "\n\n" + text;
+  }
+
+  return finalText.trim();
 }
 
-// ======================
-// MERGE TEXTS
-// ======================
-function mergeTexts(pdfText, ocrText) {
+// ===============================================
+//  CHUNKING LOGIC (AUTO: 1–4 CHUNKS)
+// ===============================================
+function splitIntoChunks(fullText) {
+  const len = fullText.length;
 
-  if (ocrText.length > pdfText.length * 1.5) {
-    return ocrText;
-  }
+  let chunksCount;
+  if (len < 12000) chunksCount = 1;
+  else if (len < 24000) chunksCount = 2;
+  else if (len < 36000) chunksCount = 3;
+  else chunksCount = 4;
 
-  if (pdfText.length > 1000) {
-    return pdfText;
-  }
+  const size = Math.ceil(len / chunksCount);
+  const chunks = [];
 
-  return pdfText + "\n" + ocrText;
-}
+  let start = 0;
+  for (let i = 0; i < chunksCount; i++) {
+    let end = start + size;
+    if (end > len) end = len;
 
-// ======================
-// EXTRACT TEXT
-// ======================
-async function extractText(file) {
-
-  // IMAGE
-  if (file.type.startsWith("image/")) {
-    return await performOCR(file);
-  }
-
-  // PDF
-  if (file.type === "application/pdf") {
-
-    const pdf = await pdfjsLib.getDocument(URL.createObjectURL(file)).promise;
-
-    let pdfText = "";
-    let ocrText = "";
-
-    for (let i = 1; i <= pdf.numPages; i++) {
-
-      console.log(`📄 Page ${i}`);
-
-      const page = await pdf.getPage(i);
-
-      // ---- TEXT ----
-      const content = await page.getTextContent();
-      const text = content.items.map(i => i.str).join(" ");
-      pdfText += "\n" + text;
-
-      // ---- SMART OCR (ONLY IF NEEDED) ----
-      if (text.length < 50) {
-        const viewport = page.getViewport({ scale: 3 });
-
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-
-        await page.render({ canvasContext: ctx, viewport }).promise;
-
-        const ocr = await performOCR(canvas);
-        ocrText += "\n" + ocr;
-      }
+    let slice = fullText.slice(start, end);
+    const lastNewline = slice.lastIndexOf("\n");
+    if (lastNewline > 200 && i !== chunksCount - 1) {
+      slice = fullText.slice(start, start + lastNewline);
+      end = start + lastNewline;
     }
 
-    return mergeTexts(pdfText, ocrText);
-  }
-
-  // TEXT FILE
-  return await file.text();
-}
-
-// ======================
-// CLEAN TEXT
-// ======================
-function cleanText(text) {
-  return text
-    .replace(/[^\x00-\x7F]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-// ======================
-// MAX 10 CHUNKS
-// ======================
-function splitIntoChunks(text) {
-  const MAX = 10;
-  const size = Math.ceil(text.length / MAX);
-
-  let chunks = [];
-  for (let i = 0; i < text.length; i += size) {
-    chunks.push(text.slice(i, i + size));
+    chunks.push(slice.trim());
+    start = end;
   }
 
   return chunks;
 }
 
-// ======================
-// SUBJECT DETECTION
-// ======================
-async function detectSubject(text) {
-  const prompt = `
-Identify subject of this exam paper in 3-5 words only.
-
-TEXT:
-${text.slice(0, 2000)}
-`;
-  return await callWorkerSafe(prompt);
-}
-
-// ======================
-// CHUNK PROMPT (FIXED)
-// ======================
-function buildChunkPrompt(chunk, subject) {
+// ===============================================
+//  PROMPTS
+// ===============================================
+function buildChunkPrompt(chunkText, index, total) {
   return `
-You are extracting exam questions.
+You are an expert exam-paper analyst.
 
-SUBJECT: ${subject}
+This is **chunk ${index}/${total}** of a question paper.  
+Your job is to extract **REAL QUESTIONS ONLY**, NOT headings.
 
-IMPORTANT:
-- Extract ONLY questions
-- Do NOT explain
-- Do NOT add extra text
-- Do NOT include code
-- Ignore theory text
+⚠️ VERY IMPORTANT RULES:
+- IGNORE section headings like:
+  - "Q.1 (20 Marks)"
+  - "Solve any Four"
+  - "Attempt any Two"
+  - "Q.2 Short Notes"
+- Extract ONLY the **actual sub-questions**, e.g.:
+  - "Explain DBMS architecture"
+  - "What is normalization?"
+  - "Define 3NF"
+- If you see a heading → skip it.
+- If you see sub-questions (a, b, c, 1, 2, 3) → treat each one as an independent question.
 
-OUTPUT:
-- question
-- question
+Your tasks for THIS CHUNK ONLY:
 
-TEXT:
-${chunk}
+1. Extract all REAL QUESTIONS  
+2. Identify repeated or similar questions  
+3. Identify repeated topics  
+4. Mark each important question  
+5. Give mini study hints  
+
+Return the result in this format:
+
+---
+## 📌 Summary (Chunk ${index}/${total})
+- Difficulty Level:
+- Unique Real Questions Found:
+- Topics Found:
+
+## 🔁 Real Repeated Questions (Chunk ${index}/${total})
+- …
+
+## 🧩 Repeated Topics (Chunk ${index}/${total})
+- …
+
+## ⭐ Important Questions (Chunk ${index}/${total})
+- Very Important:
+  - …
+- Important:
+  - …
+- Good to Know:
+  - …
+
+## 🎯 Study Hints (Chunk ${index}/${total})
+- …
+---
+
+Here is the chunk text:
+
+${chunkText}
 `;
 }
 
-// ======================
-// CLEAN QUESTIONS
-// ======================
-async function refineQuestions(results) {
-  const prompt = `
-Clean and standardize questions.
 
-IMPORTANT:
-- Do NOT explain
-- Do NOT add text
-- Only return cleaned questions
-
-Rules:
-- Remove duplicates
-- Remove incomplete questions
-- Keep only meaningful exam questions
-
-DATA:
-${results.join("\n")}
-`;
-  return await callWorkerSafe(prompt);
-}
-
-// ======================
-// MERGE PROMPT (FIXED)
-// ======================
-function buildMergePrompt(cleaned) {
+function buildMergePrompt(chunkAnalyses) {
   return `
-You are an exam analyzer.
+You are merging multiple partial analyses of the SAME exam papers.
 
-IMPORTANT:
-- Do NOT explain anything
-- Do NOT give steps
-- Do NOT give code
-- Do NOT describe algorithms
-- ONLY give final answer
+VERY IMPORTANT RULES:
+- Do NOT include headings like:
+  - "Q.1 (20 Marks)"
+  - "Solve any Four"
+  - "Attempt any Two"
+- Only include ACTUAL sub-questions found in the chunks.
 
-TASK:
-- Group questions by topic
-- Find repeated concepts
-- Count frequency
-- Predict important exam questions
+Your tasks:
 
-OUTPUT FORMAT (STRICT):
+1. Merge REAL extracted questions from all chunks  
+2. Combine duplicates (even if wording differs slightly)  
+3. Identify total repeated questions  
+4. Identify true repeated topics  
+5. Produce clear difficulty analysis  
+6. Create final study plan  
+7. DO NOT invent anything not found in the chunks  
 
-📌 Questions:
-- question
+Return final result in exactly this format:
 
-🧠 Topics:
-- Topic → count
+---
+## 📌 Summary
+- Difficulty Level:
+- Total Real Questions Analyzed:
+- Total Topics Identified:
 
-🔁 Repeated Concepts:
-- Concept → example questions (count)
+## 🔁 Most Repeated Questions
+- Actual Question (x times)
+- …
 
-🎯 Important Questions:
-- question
+## 🧩 Most Repeated Topics
+- Topic Name – xx%  
+- …
 
-⚠️ STRICT:
-- No explanation
-- No code
-- No steps
-- Only final structured answer
+## ⭐ Most Important Questions
+- Very Important:
+  - …
+- Important:
+  - …
+- Good to Know:
+  - …
 
-DATA:
-${cleaned}
+## 🎯 What to Study to Pass
+- Essential Topics:
+  - …
+- Optional but Helpful:
+  - …
+
+## 🗓️ Study Plan
+**1-Day Plan:**
+- …
+
+**3-Day Plan:**
+- …
+
+**7-Day Plan:**
+- …
+---
+
+Here are the partial analyses:
+
+${chunkAnalyses.map((txt, i) => `\n\n===== CHUNK ANALYSIS ${i + 1} =====\n${txt}`).join("")}
 `;
 }
 
-// ======================
-// MAIN ANALYSIS
-// ======================
-async function analyze(text, output) {
 
-  output.innerText = "🔍 Detecting subject...\n";
+// ===============================================
+//  CALL CLOUDFLARE WORKER
+// ===============================================
+async function callWorker(prompt, label = "analysis") {
+  const response = await fetch(WORKER_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text: prompt }),
+  });
 
-  const subject = await detectSubject(text);
+  const data = await response.json();
 
-  output.innerText += `📘 ${subject}\n\n`;
-
-  text = cleanText(text);
-
-  const chunks = splitIntoChunks(text);
-
-  let results = [];
-
-  for (let i = 0; i < chunks.length; i++) {
-    output.innerText += `📄 Processing ${i + 1}/10\n`;
-
-    const res = await callWorkerSafe(
-      buildChunkPrompt(chunks[i], subject)
-    );
-
-    if (res) results.push(res);
+  if (data.error) {
+    console.error("Worker error (" + label + "):", data.error);
+    throw new Error(data.error);
   }
 
-  output.innerText += "\n🧹 Cleaning...\n";
-
-  const cleaned = await refineQuestions(results);
-
-  output.innerText += "\n🧠 Analyzing...\n";
-
-  return await callWorkerSafe(buildMergePrompt(cleaned));
+  return data.output || "";
 }
 
-// ======================
-// BUTTON HANDLER (FIXED)
-// ======================
-document.addEventListener("DOMContentLoaded", () => {
+// ===============================================
+//  EXTRACT "MOST REPEATED QUESTIONS" FOR WHATSAPP
+// ===============================================
+function extractRepeatedQuestions(markdownText) {
+  const lines = markdownText.split("\n");
 
-  const btn = document.getElementById("analyzeBtn");
-  const input = document.getElementById("fileInput");
-  const output = document.getElementById("output");
+  const startIndex = lines.findIndex((line) =>
+    line.toLowerCase().includes("most repeated questions")
+  );
 
-  if (!btn || !input || !output) {
-    console.error("❌ Missing HTML elements");
+  if (startIndex === -1) return null;
+
+  let extracted = [];
+  for (let i = startIndex + 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+
+    if (line.startsWith("##")) break; // next section → stop
+    if (
+      line.startsWith("-") ||
+      line.startsWith("•") ||
+      line.startsWith("*")
+    ) {
+      extracted.push(line);
+    }
+  }
+
+  return extracted.length ? extracted.join("\n") : null;
+}
+
+// ===============================================
+//  MAIN ANALYZE FUNCTION
+// ===============================================
+async function analyze() {
+  const files = document.getElementById("fileInput").files;
+  const outputBox = document.getElementById("output");
+
+  if (!files.length) {
+    alert("Please upload 3–5 PDF papers first!");
     return;
   }
 
-  btn.addEventListener("click", async () => {
+  outputBox.innerHTML = "";
+  updateLoading("Starting OCR + analysis…", 3);
 
-    if (!input.files.length) {
-      alert("Upload file");
-      return;
-    }
+  let combinedText = "";
 
-    output.innerText = "⏳ Processing...\n";
+  const fileArray = Array.from(files);
+  for (let i = 0; i < fileArray.length; i++) {
+    const f = fileArray[i];
+    updateLoading(
+      `Processing file ${i + 1}/${fileArray.length}: ${f.name}`,
+      5 + (i / fileArray.length) * 20
+    );
 
-    try {
-      let text = "";
+    const text = await extractPDFText(f);
+    combinedText += `\n\n===== PAPER: ${f.name} =====\n\n${text}`;
+  }
 
-      for (let file of input.files) {
-        const extracted = await extractText(file);
-        text += extracted + "\n";
-      }
+  if (!combinedText.trim()) {
+    outputBox.innerHTML =
+      "<div class='error'>❌ OCR produced no readable text. Check PDF quality.</div>";
+    updateLoading("Error ❌", 100);
+    return;
+  }
 
-      const result = await analyze(text, output);
+  // 2) Split into auto chunks
+  const chunks = splitIntoChunks(combinedText);
+  const totalChunks = chunks.length;
 
-      output.innerText = "\n\n🎉 FINAL OUTPUT:\n\n" + result;
+  console.log("Total chunks:", totalChunks);
 
-    } catch (err) {
-      console.error(err);
-      output.innerText = "❌ Error occurred";
-    }
+  // 3) Analyze each chunk separately
+  const chunkAnalyses = [];
+  for (let i = 0; i < totalChunks; i++) {
+    const chunkPrompt = buildChunkPrompt(chunks[i], i + 1, totalChunks);
+    const progress = 30 + ((i + 1) / totalChunks) * 40;
+    updateLoading(
+      `✨ Analyzing chunk ${i + 1}/${totalChunks} with AI…`,
+      progress
+    );
 
+    const result = await callWorker(chunkPrompt, `chunk-${i + 1}`);
+    chunkAnalyses.push(result);
+  }
+
+  // 4) Merge all chunk analyses using AI
+  updateLoading("🧠 Merging all analyses into final report…", 85);
+  const mergePrompt = buildMergePrompt(chunkAnalyses);
+  const finalOutput = await callWorker(mergePrompt, "merge");
+
+  // Save raw AI output for WhatsApp share
+  window.latestAIOutput = finalOutput;
+
+  // 5) Display final result
+  document.querySelector(".results-title").classList.remove("hidden");
+
+  const html = marked.parse(finalOutput, { breaks: true, gfm: true });
+  outputBox.innerHTML = html;
+
+  updateLoading("Done ✔", 100);
+}
+
+// ===============================================
+//  EVENT: ANALYZE BUTTON
+// ===============================================
+document.getElementById("analyzeBtn").addEventListener("click", () => {
+  analyze().catch((err) => {
+    console.error(err);
+    document.getElementById("output").innerHTML =
+      "<div class='error'>❌ " + err.message + "</div>";
+    updateLoading("Error ❌", 100);
   });
+});
 
+// ===============================================
+//  EVENT: WHATSAPP SHARE
+// ===============================================
+document.getElementById("shareWhatsApp").addEventListener("click", () => {
+  const rawOutput = window.latestAIOutput || "";
+
+  if (!rawOutput) {
+    alert("Please generate the analysis first!");
+    return;
+  }
+
+  const repeatedSection = extractRepeatedQuestions(rawOutput);
+
+  if (!repeatedSection) {
+    alert("Could not find 'Most Repeated Questions' section.");
+    return;
+  }
+
+  const message = 
+`📚 *Most Repeated Questions (AI Extracted)*
+
+${repeatedSection}
+
+🔍 Get full AI exam analysis (important topics, study plan, repeated questions):
+Upload your papers here ➜ https://aiexamanalyzer.online/`;
+
+  const encoded = encodeURIComponent(message);
+  window.open("https://wa.me/?text=" + encoded, "_blank");
 });
