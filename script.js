@@ -1,4 +1,5 @@
-const WORKER_URL = "https://steep-rain-8637.pawadeshlok.workers.dev".replace(" ", "");
+
+const WORKER_URL = "https://steep-rain-8637.pawadesh lok.workers.dev".replace(" ", "");
 
 // ✅ Delay
 function delay(ms) {
@@ -47,7 +48,7 @@ async function callWorkerSafe(prompt) {
   }
 }
 
-// 🔥🔥🔥 BEST CHUNK PROMPT (HIGH QUALITY EXTRACTION)
+// 🔥🔥🔥 BEST CHUNK PROMPT (UNCHANGED)
 function buildChunkPrompt(chunk) {
   return `
 You are an expert exam paper analyzer.
@@ -84,7 +85,7 @@ ${chunk}
 `;
 }
 
-// 🔥 MERGE PROMPT (YOUR LOGIC + IMPROVED)
+// 🔥 MERGE PROMPT (UNCHANGED)
 function buildMergePrompt(chunkAnalyses) {
   return `
 You are cleaning and organizing exam questions.
@@ -153,7 +154,7 @@ async function analyze(text) {
     const res = await callWorkerSafe(buildChunkPrompt(chunks[i]));
     results.push(res);
 
-    await delay(1000); // prevent overload
+    await delay(1000);
   }
 
   console.log("Merging results...");
@@ -163,10 +164,15 @@ async function analyze(text) {
   return finalResult;
 }
 
-// ✅ BUTTON HANDLER
+// ✅ BUTTON HANDLER (FIXED)
 document.getElementById("analyzeBtn").addEventListener("click", async () => {
   const fileInput = document.getElementById("fileInput");
-  const resultBox = document.getElementById("result");
+  const resultBox = document.getElementById("output"); // ✅ FIXED
+
+  if (!resultBox) {
+    console.error("❌ output element not found");
+    return;
+  }
 
   if (!fileInput.files.length) {
     alert("Please upload files");
