@@ -1,81 +1,13 @@
-// ===============================================
-//  AI EXAM ANALYZER – FINAL STABLE VERSION 🚀
-// ===============================================
+const WORKER_URL = "https://steep-rain-8637.pawadesh lok.workers.dev".replace(" ", "");
 
-const WORKER_URL = "https://steep-rain-8637.pawadeshlok.workers.dev/";
-
-let startTime = 0;
-
-// PDF worker
-if (window.pdfjsLib) {
-  pdfjsLib.GlobalWorkerOptions.workerSrc =
-    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js";
+// ✅ Delay
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// ===============================================
-// UI
-// ===============================================
-function updateLoading(text, progress) {
-  const box = document.getElementById("loadingContainer");
-  box.classList.remove("hidden");
-
-  const timeElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-
-  document.getElementById("loadingText").innerText =
-    `${text} (${timeElapsed}s)`;
-
-  document.getElementById("progressFill").style.width =
-    Math.min(progress, 100) + "%";
-}
-
-// ===============================================
-// OCR
-// ===============================================
-async function extractPDFText(file) {
-  let finalText = "";
-
-  const pdf = await pdfjsLib.getDocument(URL.createObjectURL(file)).promise;
-
-  for (let i = 1; i <= pdf.numPages; i++) {
-    updateLoading(`📷 OCR page ${i}/${pdf.numPages}`, 5 + (i / pdf.numPages) * 25);
-
-    const page = await pdf.getPage(i);
-    const viewport = page.getViewport({ scale: 2 });
-
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-
-    await page.render({ canvasContext: ctx, viewport }).promise;
-
-    const { data: { text } } = await Tesseract.recognize(canvas, "eng");
-
-    finalText += "\n\n" + text;
-  }
-
-  return finalText;
-}
-
-// ===============================================
-// CLEAN TEXT (🔥 IMPORTANT)
-// ===============================================
-function cleanText(text) {
-  return text
-    .replace(/\s+/g, " ")
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .replace(/\.\s*\./g, ".")
-    .replace(/\s{2,}/g, " ")
-    .replace(/[^a-zA-Z0-9?.\-:,() ]/g, "")
-    .trim();
-}
-
-// ===============================================
-// CHUNKING
-// ===============================================
+// ✅ Chunking (optimized)
 function splitIntoChunks(text) {
-  const size = 800;
+  const size = 400;
   let chunks = [];
 
   for (let i = 0; i < text.length; i += size) {
@@ -85,35 +17,74 @@ function splitIntoChunks(text) {
   return chunks;
 }
 
-// ===============================================
-// 🔥 BEST CHUNK PROMPT
-// ===============================================
-function buildChunkPrompt(chunkText) {
-  return `
-Extract ONLY real exam questions.
+// ✅ Safe API call (never skips)
+async function callWorkerSafe(prompt) {
+  let attempt = 0;
 
-Rules:
-- Keep full questions only
-- Remove broken or incomplete lines
-- Do NOT generate anything
-- Ignore instructions like "Attempt any"
+  while (true) {
+    try {
+      const res = await fetch(WORKER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: prompt })
+      });
+
+      if (!res.ok) throw new Error("Server error");
+
+      const data = await res.json();
+
+      if (data.output && data.output.trim() !== "") {
+        return data.output;
+      }
+
+      throw new Error("Empty response");
+
+    } catch (err) {
+      attempt++;
+      console.log(`🔁 Retry attempt ${attempt}`);
+      await delay(2000);
+    }
+  }
+}
+
+// 🔥🔥🔥 BEST CHUNK PROMPT (HIGH QUALITY EXTRACTION)
+function buildChunkPrompt(chunk) {
+  return `
+You are an expert exam paper analyzer.
+
+Your job is to carefully read the given text and extract ONLY valid exam questions.
+
+STRICT RULES:
+- Extract only meaningful questions
+- Ignore headings, instructions, random text
+- Ignore incomplete or broken sentences
+- Fix grammar if needed
+- Normalize abbreviations:
+  - DFS = Depth First Search
+  - AI = Artificial Intelligence
+  - DBMS = Database Management System
+
+VERY IMPORTANT:
+- If questions are similar but worded differently, rewrite them in a standard clear format
+- Each question must be clean and complete
+
+OUTPUT FORMAT (STRICT):
+Questions:
+- Question 1
+- Question 2
+- Question 3
+
+DO NOT:
+- Add explanations
+- Add extra text
+- Return anything except the list
 
 TEXT:
-${chunkText}
-
-OUTPUT:
-
-Questions:
-- question
-
-Topics:
-- topic
+${chunk}
 `;
 }
 
-// ===============================================
-// 🔥 FINAL MERGE PROMPT (FIXED)
-// ===============================================
+// 🔥 MERGE PROMPT (YOUR LOGIC + IMPROVED)
 function buildMergePrompt(chunkAnalyses) {
   return `
 You are cleaning and organizing exam questions.
@@ -124,7 +95,7 @@ Rules:
 - Keep only meaningful questions
 - Do NOT add anything new
 
-🔥 VERY IMPORTANT (NEW LOGIC):
+🔥 VERY IMPORTANT (CORE LOGIC):
 - Questions with SAME MEANING must be treated as SAME
 - Do NOT rely on exact wording
 - Group similar questions under ONE concept
@@ -133,6 +104,14 @@ Examples:
 - "Explain DFS" = "Explain Depth First Search"
 - "Define normalization" = "What is normalization"
 - "Explain A* algorithm" = "Describe A star algorithm"
+
+TASK:
+
+1. Merge all questions
+2. Group similar meaning questions
+3. Count repetition based on CONCEPT (not wording)
+4. Identify important topics
+5. Predict most probable exam questions
 
 OUTPUT:
 
@@ -146,8 +125,8 @@ OUTPUT:
 🧩 Important Topics:
 - topic
 
-🎯 Predicted Questions:
-- most repeated concepts
+🎯 Predicted Questions (HIGH PROBABILITY):
+- question
 
 🗓️ Study Strategy:
 - Focus on repeated concepts
@@ -156,96 +135,60 @@ OUTPUT:
 IMPORTANT:
 - Complete full response
 - Do NOT cut output
-- Use meaning-based grouping (NOT exact match)
+- Use meaning-based grouping
 
 DATA:
 ${chunkAnalyses.join("\n")}
 `;
 }
 
-// ===============================================
-// API CALL
-// ===============================================
-async function callWorker(prompt) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
-
-  try {
-    const res = await fetch(WORKER_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: prompt }),
-      signal: controller.signal
-    });
-
-    clearTimeout(timeout);
-
-    if (!res.ok) throw new Error("Server error");
-
-    const data = await res.json();
-
-    return data.output || "⚠️ Partial output";
-
-  } catch (err) {
-    console.log("⚠️ Skipped chunk");
-    return "";
-  }
-}
-
-// ===============================================
-// MAIN
-// ===============================================
-async function analyze() {
-  const files = document.getElementById("fileInput").files;
-  const output = document.getElementById("output");
-
-  if (!files.length) {
-    alert("Upload files");
-    return;
-  }
-
-  startTime = Date.now();
-  updateLoading("🚀 Starting...", 2);
-
-  let text = "";
-
-  for (let f of files) {
-    text += await extractPDFText(f);
-  }
-
-  text = cleanText(text);
-
-  if (text.length > 6000) {
-    text = text.slice(0, 6000);
-  }
-
+// ✅ MAIN ANALYSIS
+async function analyze(text) {
   const chunks = splitIntoChunks(text);
   let results = [];
 
   for (let i = 0; i < chunks.length; i++) {
-    updateLoading(`✨ Processing ${i + 1}/${chunks.length}`, 30 + (i / chunks.length) * 40);
+    console.log(`Processing chunk ${i + 1}/${chunks.length}`);
 
-    const res = await callWorker(buildChunkPrompt(chunks[i]));
-    if (res) results.push(res);
+    const res = await callWorkerSafe(buildChunkPrompt(chunks[i]));
+    results.push(res);
+
+    await delay(1000); // prevent overload
   }
 
-  // 🔥 LIMIT FINAL INPUT (IMPORTANT FIX)
-  const limitedResults = results.slice(0, 5);
+  console.log("Merging results...");
 
-  updateLoading("🧠 Finalizing...", 85);
+  const finalResult = await callWorkerSafe(buildMergePrompt(results));
 
-  const final = await callWorker(buildMergePrompt(limitedResults));
-
-  output.innerHTML = marked.parse(final);
-  updateLoading("✅ Done", 100);
+  return finalResult;
 }
 
-// ===============================================
-// EVENT
-// ===============================================
-document.getElementById("analyzeBtn").onclick = () => {
-  analyze().catch(err => {
-    document.getElementById("output").innerHTML =
-      `<div class="error">❌ ${err.message}</div>`;
-  });
-};
+// ✅ BUTTON HANDLER
+document.getElementById("analyzeBtn").addEventListener("click", async () => {
+  const fileInput = document.getElementById("fileInput");
+  const resultBox = document.getElementById("result");
+
+  if (!fileInput.files.length) {
+    alert("Please upload files");
+    return;
+  }
+
+  resultBox.innerText = "Processing... Please wait ⏳";
+
+  try {
+    let fullText = "";
+
+    for (let file of fileInput.files) {
+      const text = await file.text();
+      fullText += text + "\n";
+    }
+
+    const output = await analyze(fullText);
+
+    resultBox.innerText = output;
+
+  } catch (err) {
+    console.error(err);
+    resultBox.innerText = "Error occurred ❌";
+  }
+});
