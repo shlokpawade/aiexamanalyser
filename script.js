@@ -1,23 +1,11 @@
 const WORKER_URL = "https://steep-rain-8637.pawadesh lok.workers.dev".replace(" ", "");
 
-// ✅ Delay
+// ✅ Delay (for retry only)
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// ✅ Bigger chunks (optimized)
-function splitIntoChunks(text) {
-  const size = 5000;
-  let chunks = [];
-
-  for (let i = 0; i < text.length; i += size) {
-    chunks.push(text.slice(i, i + size));
-  }
-
-  return chunks;
-}
-
-// ✅ Safe API
+// ✅ SAFE API (no timeout crash)
 async function callWorkerSafe(prompt) {
   let attempt = 0;
 
@@ -37,12 +25,12 @@ async function callWorkerSafe(prompt) {
         return data.output;
       }
 
-      throw new Error("Empty response");
+      throw new Error("Empty");
 
     } catch (err) {
       attempt++;
       console.log(`🔁 Retry ${attempt}`);
-      await delay(1500);
+      await delay(1200);
     }
   }
 
@@ -144,8 +132,50 @@ ${chunkAnalyses.join("\n")}
 `;
 }
 
-// 🚀 PARALLEL PROCESSING
-async function processChunksParallel(chunks, concurrency = 5) {
+// 🔥 OCR (BEST VERSION)
+async function performOCR(file) {
+  const { createWorker } = Tesseract;
+  const worker = await createWorker("eng");
+
+  const { data: { text } } = await worker.recognize(file);
+
+  await worker.terminate();
+
+  return text;
+}
+
+// 🔥 SMART QUESTION FILTER (BIGGEST UPGRADE)
+function extractQuestionsOnly(text) {
+  const lines = text.split("\n");
+
+  return lines
+    .map(l => l.trim())
+    .filter(l =>
+      l.length > 15 &&
+      (
+        l.endsWith("?") ||
+        l.match(/^(what|explain|define|describe|compare|differentiate|write|list|state|discuss)/i)
+      )
+    )
+    .join("\n");
+}
+
+// 🔥 SMART CHUNKING (BY QUESTIONS)
+function splitIntoChunks(text) {
+  const lines = text.split("\n");
+  const chunkSize = 20; // 20 questions per chunk
+
+  let chunks = [];
+
+  for (let i = 0; i < lines.length; i += chunkSize) {
+    chunks.push(lines.slice(i, i + chunkSize).join("\n"));
+  }
+
+  return chunks;
+}
+
+// 🚀 PARALLEL PROCESSING (FAST)
+async function processChunksParallel(chunks, concurrency = 4) {
   let results = [];
   let index = 0;
 
@@ -168,54 +198,43 @@ async function processChunksParallel(chunks, concurrency = 5) {
   return results;
 }
 
-// 🔥 OCR FUNCTION (MAIN UPGRADE)
-async function performOCR(file) {
-  const { createWorker } = Tesseract;
-
-  const worker = await createWorker("eng");
-
-  console.log("🔍 OCR started...");
-
-  const { data: { text } } = await worker.recognize(file);
-
-  await worker.terminate();
-
-  return text;
-}
-
-// ✅ TEXT EXTRACTION (SMART)
-async function extractText(file) {
-
-  const fileType = file.type;
-
-  // 🖼️ IMAGE → OCR
-  if (fileType.startsWith("image/")) {
-    return await performOCR(file);
-  }
-
-  // 📄 TEXT PDF
-  const text = await file.text();
-
-  // If empty → fallback OCR
-  if (text.trim().length < 50) {
-    console.log("⚠️ Low text detected → using OCR fallback");
-    return await performOCR(file);
-  }
-
-  return text;
-}
-
-// ✅ MAIN ANALYSIS
+// 🔥 FINAL ANALYZE (OPTIMIZED PIPELINE)
 async function analyze(text) {
+
+  // 1️⃣ Clean
+  text = text.replace(/[^\x00-\x7F]/g, "").trim();
+
+  // 2️⃣ Extract only questions (CRITICAL)
+  text = extractQuestionsOnly(text);
+
+  console.log("Filtered question text length:", text.length);
+
+  // 3️⃣ Chunk by questions
   const chunks = splitIntoChunks(text);
 
-  console.log(`Total chunks: ${chunks.length}`);
+  console.log(`🚀 Final chunks: ${chunks.length}`);
 
-  const results = await processChunksParallel(chunks, 5);
+  // 4️⃣ Process
+  const results = await processChunksParallel(chunks, 4);
 
-  console.log("Merging results...");
-
+  // 5️⃣ Merge
   return await callWorkerSafe(buildMergePrompt(results));
+}
+
+// ✅ FILE TEXT EXTRACTION
+async function extractText(file) {
+
+  if (file.type.startsWith("image/")) {
+    return await performOCR(file);
+  }
+
+  const text = await file.text();
+
+  if (text.length < 50) {
+    return await performOCR(file);
+  }
+
+  return text;
 }
 
 // ✅ BUTTON HANDLER
@@ -231,7 +250,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    resultBox.innerText = "Processing with OCR... ⏳";
+    resultBox.innerText = "Processing smart analysis... ⏳";
 
     try {
       let fullText = "";
