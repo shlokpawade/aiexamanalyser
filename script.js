@@ -1,13 +1,12 @@
-
 // ===============================================
-//  AI EXAM ANALYZER – ULTRA FINAL VERSION 🚀
+//  AI EXAM ANALYZER – FINAL STABLE VERSION 🚀
 // ===============================================
 
 const WORKER_URL = "https://steep-rain-8637.pawadeshlok.workers.dev/";
 
 let startTime = 0;
 
-// PDF.js worker
+// PDF worker
 if (window.pdfjsLib) {
   pdfjsLib.GlobalWorkerOptions.workerSrc =
     "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js";
@@ -60,7 +59,7 @@ async function extractPDFText(file) {
 }
 
 // ===============================================
-// 🔥 CLEAN OCR TEXT (CRITICAL)
+// CLEAN TEXT (🔥 IMPORTANT)
 // ===============================================
 function cleanText(text) {
   return text
@@ -87,17 +86,16 @@ function splitIntoChunks(text) {
 }
 
 // ===============================================
-// 🔥 ULTRA CLEAN EXTRACTION PROMPT
+// 🔥 BEST CHUNK PROMPT
 // ===============================================
 function buildChunkPrompt(chunkText) {
   return `
-You are analyzing a REAL university exam paper.
+Extract ONLY real exam questions.
 
-STRICT RULES:
-- Extract ONLY complete and meaningful questions
-- Remove incomplete, broken, or OCR-noise sentences
-- Do NOT generate or guess anything
-- Do NOT modify wording
+Rules:
+- Keep full questions only
+- Remove broken or incomplete lines
+- Do NOT generate anything
 - Ignore instructions like "Attempt any"
 
 TEXT:
@@ -106,37 +104,29 @@ ${chunkText}
 OUTPUT:
 
 Questions:
-- full clean question
+- question
 
 Topics:
-- short topic
+- topic
 `;
 }
 
 // ===============================================
-// 🔥 FINAL INTELLIGENT MERGE PROMPT
+// 🔥 FINAL MERGE PROMPT (FIXED)
 // ===============================================
 function buildMergePrompt(chunkAnalyses) {
   return `
-You are an expert academic analyzer.
+You are cleaning and organizing exam questions.
 
-STRICT RULES:
-- Only use given questions
+Rules:
 - Remove duplicates
-- Remove incomplete or meaningless questions
-- Merge similar questions into one clean version
-- Improve grammar ONLY if necessary
-
-TASK:
-
-1. Create clean final question list
-2. Detect repeated questions with frequency
-3. Extract important topics
-4. Predict most likely exam questions
+- Remove incomplete questions
+- Keep only meaningful questions
+- Do NOT add anything new
 
 OUTPUT:
 
-📌 Final Questions (Clean):
+📌 Final Questions:
 - question
 
 🔁 Repeated Questions:
@@ -146,11 +136,15 @@ OUTPUT:
 - topic
 
 🎯 Predicted Questions:
-- high probability question
+- most repeated questions
 
 🗓️ Study Strategy:
 - Focus on repeated topics
 - Practice predicted questions
+
+IMPORTANT:
+- Complete full response
+- Do NOT cut output
 
 DATA:
 ${chunkAnalyses.join("\n")}
@@ -162,7 +156,7 @@ ${chunkAnalyses.join("\n")}
 // ===============================================
 async function callWorker(prompt) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 12000);
+  const timeout = setTimeout(() => controller.abort(), 15000);
 
   try {
     const res = await fetch(WORKER_URL, {
@@ -178,7 +172,7 @@ async function callWorker(prompt) {
 
     const data = await res.json();
 
-    return data.output;
+    return data.output || "⚠️ Partial output";
 
   } catch (err) {
     console.log("⚠️ Skipped chunk");
@@ -223,9 +217,12 @@ async function analyze() {
     if (res) results.push(res);
   }
 
+  // 🔥 LIMIT FINAL INPUT (IMPORTANT FIX)
+  const limitedResults = results.slice(0, 5);
+
   updateLoading("🧠 Finalizing...", 85);
 
-  const final = await callWorker(buildMergePrompt(results));
+  const final = await callWorker(buildMergePrompt(limitedResults));
 
   output.innerHTML = marked.parse(final);
   updateLoading("✅ Done", 100);
