@@ -48,7 +48,7 @@ async function callWorkerSafe(prompt) {
 }
 
 // ======================
-// OCR FUNCTION
+// OCR
 // ======================
 async function performOCR(image) {
   const worker = await Tesseract.createWorker("eng");
@@ -62,7 +62,7 @@ async function performOCR(image) {
 }
 
 // ======================
-// MERGE PDF + OCR TEXT
+// MERGE TEXTS
 // ======================
 function mergeTexts(pdfText, ocrText) {
 
@@ -78,7 +78,7 @@ function mergeTexts(pdfText, ocrText) {
 }
 
 // ======================
-// HYBRID EXTRACTION
+// EXTRACT TEXT
 // ======================
 async function extractText(file) {
 
@@ -101,24 +101,26 @@ async function extractText(file) {
 
       const page = await pdf.getPage(i);
 
-      // ---- TEXT EXTRACTION ----
+      // ---- TEXT ----
       const content = await page.getTextContent();
       const text = content.items.map(i => i.str).join(" ");
       pdfText += "\n" + text;
 
-      // ---- OCR ----
-      const viewport = page.getViewport({ scale: 3 });
+      // ---- SMART OCR (ONLY IF NEEDED) ----
+      if (text.length < 50) {
+        const viewport = page.getViewport({ scale: 3 });
 
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
 
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
 
-      await page.render({ canvasContext: ctx, viewport }).promise;
+        await page.render({ canvasContext: ctx, viewport }).promise;
 
-      const ocr = await performOCR(canvas);
-      ocrText += "\n" + ocr;
+        const ocr = await performOCR(canvas);
+        ocrText += "\n" + ocr;
+      }
     }
 
     return mergeTexts(pdfText, ocrText);
@@ -163,26 +165,28 @@ Identify subject of this exam paper in 3-5 words only.
 TEXT:
 ${text.slice(0, 2000)}
 `;
-
   return await callWorkerSafe(prompt);
 }
 
 // ======================
-// EXTRACT QUESTIONS
+// CHUNK PROMPT (FIXED)
 // ======================
 function buildChunkPrompt(chunk, subject) {
   return `
-You are an expert exam parser.
+You are extracting exam questions.
 
 SUBJECT: ${subject}
 
-Extract ONLY complete and meaningful questions.
+IMPORTANT:
+- Extract ONLY questions
+- Do NOT explain
+- Do NOT add extra text
+- Do NOT include code
+- Ignore theory text
 
-Rules:
-- No headings
-- No instructions
-- No incomplete text
-- Fix grammar if needed
+OUTPUT:
+- question
+- question
 
 TEXT:
 ${chunk}
@@ -196,40 +200,61 @@ async function refineQuestions(results) {
   const prompt = `
 Clean and standardize questions.
 
+IMPORTANT:
+- Do NOT explain
+- Do NOT add text
+- Only return cleaned questions
+
+Rules:
 - Remove duplicates
-- Remove incomplete ones
-- Keep only exam-ready questions
+- Remove incomplete questions
+- Keep only meaningful exam questions
 
 DATA:
 ${results.join("\n")}
 `;
-
   return await callWorkerSafe(prompt);
 }
 
 // ======================
-// CLUSTER + PREDICT
+// MERGE PROMPT (FIXED)
 // ======================
 function buildMergePrompt(cleaned) {
   return `
-Analyze and cluster exam questions.
+You are an exam analyzer.
 
-Tasks:
-- Group by topic
+IMPORTANT:
+- Do NOT explain anything
+- Do NOT give steps
+- Do NOT give code
+- Do NOT describe algorithms
+- ONLY give final answer
+
+TASK:
+- Group questions by topic
+- Find repeated concepts
 - Count frequency
-- Detect repeated concepts
-- Predict important questions
+- Predict important exam questions
 
-OUTPUT:
+OUTPUT FORMAT (STRICT):
 
 📌 Questions:
 - question
 
 🧠 Topics:
-- Topic → (count)
+- Topic → count
+
+🔁 Repeated Concepts:
+- Concept → example questions (count)
 
 🎯 Important Questions:
 - question
+
+⚠️ STRICT:
+- No explanation
+- No code
+- No steps
+- Only final structured answer
 
 DATA:
 ${cleaned}
@@ -254,32 +279,37 @@ async function analyze(text, output) {
   let results = [];
 
   for (let i = 0; i < chunks.length; i++) {
-    output.innerText += `📄 Chunk ${i + 1}/10\n`;
+    output.innerText += `📄 Processing ${i + 1}/10\n`;
 
     const res = await callWorkerSafe(
       buildChunkPrompt(chunks[i], subject)
     );
 
-    results.push(res);
+    if (res) results.push(res);
   }
 
   output.innerText += "\n🧹 Cleaning...\n";
 
   const cleaned = await refineQuestions(results);
 
-  output.innerText += "\n🧠 Clustering...\n";
+  output.innerText += "\n🧠 Analyzing...\n";
 
   return await callWorkerSafe(buildMergePrompt(cleaned));
 }
 
 // ======================
-// BUTTON HANDLER
+// BUTTON HANDLER (FIXED)
 // ======================
 document.addEventListener("DOMContentLoaded", () => {
 
   const btn = document.getElementById("analyzeBtn");
   const input = document.getElementById("fileInput");
   const output = document.getElementById("output");
+
+  if (!btn || !input || !output) {
+    console.error("❌ Missing HTML elements");
+    return;
+  }
 
   btn.addEventListener("click", async () => {
 
